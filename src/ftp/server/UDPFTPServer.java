@@ -2,6 +2,7 @@ package ftp.server;
 
 import ftp.FTPService;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.*;
 import java.nio.file.Files;
@@ -84,8 +85,18 @@ public class UDPFTPServer {
     }
 
     private void listAction(String request) {
-        // TODO HandleList call
-        System.out.println("Handle FTP Connection for " + this.p.getAddress().getHostAddress());
+        File file;
+        file = new File(FTP_ROOT);
+        try {
+            if (Files.isReadable(file.toPath())) {
+                executor.execute(new HandleList(file, 0, this.p.getAddress(), this.p.getPort()));
+            } else {
+                String rx = FTPService.Response.SERVERROR.toString();
+                rx += " " + file.getPath() + " is not readable";
+                FTPService.sendUDPmessage(this.s, rx, this.p.getSocketAddress());
+                return;
+            }
+        }catch (Exception e){}
     }
 
     private void getAction(String request) throws IOException {
@@ -101,7 +112,7 @@ public class UDPFTPServer {
             return;
         }
 
-        // TODO implement GetHandle
+        // TODO implement Get   Handle
     }
 
     private void handleCommand(){
