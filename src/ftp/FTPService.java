@@ -1,9 +1,9 @@
 package ftp;
 
 import java.io.File;
+
 import java.io.IOException;
 import java.net.*;
-
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -17,6 +17,7 @@ public class FTPService {
     public static final int SIZEMAX = 255; // Maximum size of datagram UDP
     public static final int SERVERPORT = 5000; // default ftp.server port
     public static final int TIMEOUT = 1000; //suponemos que son ms
+    public static final int CHUNKSIZE = 1024; //bytes por bloque
 
     static public enum Command {HELLO, LIST, GET, QUIT, ERROR};
     static public enum Response {WCOME, OK, PORT, SERVERROR, BYE, UNKNOWN};
@@ -99,7 +100,6 @@ public class FTPService {
 
     }
 
-
     public static String getFilenameFromPart(File f) {
 
         Matcher expIn = Pattern.compile("(.*)\\.part\\d+-\\d+$").matcher(f.getName());
@@ -109,6 +109,14 @@ public class FTPService {
         } else {
             return null;
         }
+    }
+
+    public static long getNChunks(File f, int chunkSize) {
+
+        long size = f.length();
+        long chunks = (size % chunkSize == 0) ? (size / chunkSize) : (size / chunkSize + 1);
+
+        return chunks;
     }
 
 }

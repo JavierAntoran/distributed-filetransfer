@@ -30,6 +30,8 @@ public class HandleFTPConnection implements Runnable{
     private File f;
     private String ftpPath;
 
+    private byte[] chunk;
+
     public HandleFTPConnection(int lPort, int rPortUDP, String ftpPAth) {
 
 
@@ -86,6 +88,23 @@ public class HandleFTPConnection implements Runnable{
         }
         buffw.close();
         out.close();
+
+    }
+
+    private int getChunk(File f, int nChunk, int chunkSize) throws Exception {
+
+        this.chunk = new byte[chunkSize];
+        FileInputStream fis = new FileInputStream(f);
+        int dataread;
+
+        if ( (dataread = fis.read(chunk)) <= 0) {
+            System.out.println("error leyendo chunk: " + nChunk);
+        }
+        return dataread;
+    }
+
+    private void sendChunk() {
+
 
     }
 
