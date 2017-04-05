@@ -13,58 +13,45 @@ import java.nio.file.Paths;
 /**
  * Created by StFrancisco on 21/03/2017.
  */
-public class HandleFTPConnection {
+abstract public class HandleFTPConnection implements Runnable{
 
-    protected Socket toClient;
-    protected ServerSocket welcoming;
+    protected int soTimeOut = 3000;
 
-    protected InetAddress lHost;
+    protected Socket clientSocket;
+    protected ServerSocket welcomingSocket;
+    protected DatagramSocket dSocket;
+
     protected int lPort;
-    protected InetAddress rHost;
-    protected int rPortUDP;
+    protected InetAddress rAddress;
+    protected int rPort;
 
     protected OutputStream out;
-    protected  FileInputStream fis;
 
-    public HandleFTPConnection(int lPort, int rPortUDP) throws Exception {
-
+    public HandleFTPConnection(int lPort, InetAddress rAddress, int rPort){
         this.lPort = lPort;
-        this.rPortUDP = rPortUDP;
-        this.welcoming = new ServerSocket(lPort); // le decimos que escuche donde quiera
+        this.rPort = rPort;
+        this.rAddress = rAddress;
+    }
 
-        this.lPort = welcoming.getLocalPort();
-        this.lHost = welcoming.getInetAddress();
+    protected void sendPortCommand(int port) throws IOException{
+
+        String msg = FTPService.Response.PORT.toString();
+        msg += " " + port;
+
+        FTPService.sendUDPmessage(this.dSocket, msg, this.rAddress, this.rPort);
+        System.out.println("> " + msg);
 
     }
 
-    public int getlPort() {
-        return lPort; //devolvemos puerto para RESPONSE: PORT X
-    }
+    protected void sendUDPOK(String msg) throws IOException {
+        if (msg != null) {
+            msg = FTPService.Response.OK.toString() + msg;
+        } else {
+            msg = FTPService.Response.OK.toString();
+        }
 
-
-
-    private void sendUDPOK(InetAddress rHost, int rPortUDP) throws Exception {
-
-        String text = FTPService.Response.OK.toString();
-        byte[] buff = text.getBytes();
-
-        DatagramSocket d = new DatagramSocket(); // SO elige puerto
-        DatagramPacket packet = new DatagramPacket(buff, buff.length, rHost, rPortUDP);
-        d.send(packet);
-        System.out.println("Sent: " + text);
-    }//will be deprecated soon
-
-    private void sendUDPOK(InetAddress rHost, int rPortUDP, String message) throws Exception {
-        /*
-        use when confirming specific file or action
-         */
-        String text = FTPService.Response.OK.toString() + " " + message;
-        byte[] buff = text.getBytes();
-
-        DatagramSocket d = new DatagramSocket(); // SO elige puerto
-        DatagramPacket packet = new DatagramPacket(buff, buff.length, rHost, rPortUDP);
-        d.send(packet);
-        System.out.println("Sent: " + text);
+        FTPService.sendUDPmessage(this.dSocket, msg, this.rAddress, this.rPort);
+        System.out.println("> " + msg);
     }
 
 }

@@ -1,11 +1,11 @@
 package ftp.server;
 
-import ftp.FTPService;
-
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -17,68 +17,56 @@ import java.nio.file.Paths;
  */
 public class HandleList extends HandleFTPConnection{
 
-    public HandleList(File f, int firstChunk, int lastChunk) throws Exception{
+    private File f;
 
-
+    public HandleList(File f, int lPort, InetAddress rAddress, int rPort) throws Exception{
+        super(0, rAddress, rPort);
+        this.f = f;
     }
 
-    private void sendList() throws Exception{
-
-        BufferedWriter buffw = new BufferedWriter(new OutputStreamWriter(this.out));
-        Path dir = Paths.get(ftpPath);
-        DirectoryStream<Path> dirList = Files.newDirectoryStream(dir);
-
-        String fileName;
-
-        for (Path p: dirList) {
-            if (! Files.isDirectory(p)) {
-                fileName = p.getFileName().toString();
-            } else {
-                fileName = "(dir) " + p.getFileName().toString();
-            }
-            buffw.write(fileName +  "\t" + Files.size(p) + "\n");
-            buffw.flush();
-        }
-        buffw.close();
-        out.close();
-
-    }
-
-    @Override
     public void run() {
 
-        System.out.println("FTP handler launched, mode: " );
+        System.out.println("List FTP handler launched " );
         try {
-            this.toClient = this.welcoming.accept();
-            rHost = this.toClient.getInetAddress();
-            System.out.println("TCP conection established with " + rHost.toString() + ":" + toClient.getPort());
 
-           /* if (this.toClient.getInetAddress().equals(this.lHost) ) { *****???****
-                System.out.println("Conectado a host erroneo");
-            }*/
+            this.welcomingSocket = new ServerSocket(this.lPort);
+            this.welcomingSocket.setSoTimeout(this.soTimeOut);
+            this.dSocket = new DatagramSocket();
 
-            this.out = this.toClient.getOutputStream();
+            sendPortCommand(this.welcomingSocket.getLocalPort());
 
-            if (this.t.equals(task.LIST)) { //averiguamos que accion tomar
-                sendList();
-            } else if (this.t.equals(task.GETFILE)) {
-                sendFile(this.f);
-                this.fis.close();
-            } else if (this.t.equals(task.GETCHUNKS)) {
-                sendChunk(this.firstChunk, this.lastChunk);
-                this.fis.close();
+            this.clientSocket = this.welcomingSocket.accept();
+
+            this.out = this.clientSocket.getOutputStream();
+
+            Path dir = Paths.get(this.f.getAbsolutePath());
+            try {
+                DirectoryStream<Path> stream = Files.newDirectoryStream(dir);
+                String filename;
+                for (Path entry : stream) {
+                    if (! Files.isDirectory(entry)) {
+                        filename = entry.getFileName().toString();
+                    } else {
+                        filename = "(dir) " + entry.getFileName().toString();
+                    }
+                    this.out.write(new String(filename +  "\t" + Files.size(entry) + "\n").getBytes());
+                }
+                this.out.flush();
+
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
             }
 
             this.out.close();
 
-            this.toClient.close();
-            this.welcoming.close();
+            this.clientSocket.close();
+            this.welcomingSocket.close();
 
-            System.out.println("TCP Conection with " + rHost.toString() + ":" + toClient.getPort() + " closed");
+            sendUDPOK(null);
 
-            sendUDPOK(this.rHost, this.rPortUDP);
-
-        } catch (Exception fx) {}
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
     }
 
 }
