@@ -36,9 +36,6 @@ public class FTPService {
         } else {
             return Command.ERROR;
         }
-
-        // TODO: extraer el elemento de tipo Command correspondiente al comando
-        //		introducido como par�metro en modo texto ('textcommand')
     }
 
     public static Response responseFromString(String textresponse){
@@ -58,7 +55,7 @@ public class FTPService {
 
     }
 
-    public static String requestedFile(String textcommand) {
+    public static String requestedFile(String textcommand) throws Exception{
 
         String detect = "GET\\s+(.*)";
         Matcher expIn = Pattern.compile(detect).matcher(textcommand);
@@ -66,7 +63,7 @@ public class FTPService {
         if (expIn.find()) {
             return expIn.group(1);
         } else {
-            return "error getting filename";
+            throw new Exception("Missing argument FILE from GET command");
         }
 
     }
@@ -105,10 +102,10 @@ public class FTPService {
 
     }
 
-    public static String getFilenameFromPart(File f) {
+    public static String getFilenameFromPart(String filename) {
 
         Matcher expIn = Pattern.compile("(.*)\\.part\\d+-\\d+$")
-                               .matcher(f.getName());
+                               .matcher(filename);
 
         if (expIn.find()) {
             return expIn.group(1);
@@ -116,6 +113,21 @@ public class FTPService {
             return null;
         }
     }
+
+    public static int[] getIntervalFromPart(String filename) {
+
+        Matcher expIn = Pattern.compile(".*\\.part(\\d+)-(\\d+)$")
+                .matcher(filename);
+
+        if (expIn.find()) {
+            int[] intval =  {Integer.parseInt(expIn.group(1)),
+                    Integer.parseInt(expIn.group(2))};
+            return intval;
+        } else {
+            return null;
+        }
+    }
+
 
     public static long getNChunks(File f, int chunkSize) {
 
