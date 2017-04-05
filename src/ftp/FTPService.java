@@ -1,5 +1,6 @@
 package ftp;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.*;
 
@@ -96,6 +97,18 @@ public class FTPService {
         DatagramPacket sendPacket = new DatagramPacket(buff, buff.length, rHost, rPort);
         s.send(sendPacket);
 
+    }
+
+
+    public static String getFilenameFromPart(File f) {
+
+        Matcher expIn = Pattern.compile("(.*)\\.part\\d+-\\d+$").matcher(f.getName());
+
+        if (expIn.find()) {
+            return expIn.group(1);
+        } else {
+            return null;
+        }
     }
 
 }
