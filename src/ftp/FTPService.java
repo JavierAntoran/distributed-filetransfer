@@ -1,11 +1,9 @@
 package ftp;
 
 import java.io.File;
-import java.io.FileInputStream;
+
 import java.io.IOException;
 import java.net.*;
-
-import java.nio.file.Files;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -58,8 +56,6 @@ public class FTPService {
             return Response.UNKNOWN;
         }
 
-        // TODO: extraer el elemento de tipo Response correspondiente a la respuesta
-        //		introducida como par�metro en modo texto ('textresponse')
     }
 
     public static String requestedFile(String textcommand) {
@@ -73,8 +69,6 @@ public class FTPService {
             return "error getting filename";
         }
 
-        // TODO: extraer el nombre del fichero a descargar a partir del comando
-        //		correspondiente, tipo GET <file>
     }
 
     public static int portFromResponse(String textresponse){
@@ -87,25 +81,47 @@ public class FTPService {
         } else {
             return 0; // Si error en puerto que hacer???
         }
-        // TODO: extraer el puerto (dato tipo 'int') a partir del texto que lo indica
-        //		en la respuesta correspondiente, tipo PORT <port>
+
     }
 
-    public static void sendUDPmessage(DatagramSocket s, String text, InetAddress rHost, int rPort) throws IOException{
+    public static void sendUDPmessage(DatagramSocket s, String text,
+                                      InetAddress rHost, int rPort)
+            throws IOException{
 
+        SocketAddress isa = new InetSocketAddress(rHost, rPort);
+
+        sendUDPmessage(s, text, isa);
+
+    }
+
+    public static void sendUDPmessage(DatagramSocket s, String text,
+                                      SocketAddress sa) throws IOException{
         byte[] buff;
 
         buff = text.getBytes();
 
-        DatagramPacket sendPacket = new DatagramPacket(buff, buff.length, rHost, rPort);
+        DatagramPacket sendPacket = new DatagramPacket(buff, buff.length, sa);
         s.send(sendPacket);
 
+    }
+
+    public static String getFilenameFromPart(File f) {
+
+        Matcher expIn = Pattern.compile("(.*)\\.part\\d+-\\d+$")
+                               .matcher(f.getName());
+
+        if (expIn.find()) {
+            return expIn.group(1);
+        } else {
+            return null;
+        }
     }
 
     public static long getNChunks(File f, int chunkSize) {
 
         long size = f.length();
-        long chunks = (size % chunkSize == 0) ? (size / chunkSize) : (size / chunkSize + 1);
+        long chunks = (size % chunkSize == 0) ? (size / chunkSize)
+                                              : (size / chunkSize + 1);
 
         return chunks;
     }
