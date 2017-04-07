@@ -29,6 +29,21 @@ abstract public class HandleFTPConnection implements Runnable {
         this.rHost = rHost;
     }
 
+    //protected abstract void sendInfo();
+
+    protected void establishTCP() throws Exception {
+
+        this.welcomingSocket = new ServerSocket(this.lPort);
+        this.welcomingSocket.setSoTimeout(this.soTimeOut);
+        this.dSocket = new DatagramSocket();
+
+        sendPortCommand(this.welcomingSocket.getLocalPort());
+
+        this.clientSocket = this.welcomingSocket.accept();
+
+        this.out = this.clientSocket.getOutputStream();
+    }
+
     protected void sendPortCommand(int port) throws IOException{
 
         String msg = FTPService.Response.PORT.toString();

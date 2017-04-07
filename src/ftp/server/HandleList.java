@@ -24,38 +24,37 @@ public class HandleList extends HandleFTPConnection{
         this.f = f;
     }
 
+    private void sendList(Path dir) {
+
+        try {
+            DirectoryStream<Path> list = Files.newDirectoryStream(dir);
+            String filename;
+            for (Path entry : list) {
+                if (! Files.isDirectory(entry)) {
+                    filename = entry.getFileName().toString();
+                } else {
+                    filename = "(dir) " + entry.getFileName().toString();
+                }
+                this.out.write(new String(filename +  "\t" + Files.size(entry) + "\n").getBytes());
+            }
+            this.out.flush();
+
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+    }
+
     public void run() {
 
         System.out.println("FTP Listing handler launched." );
         try {
 
-            this.welcomingSocket = new ServerSocket(this.lPort);
-            this.welcomingSocket.setSoTimeout(this.soTimeOut);
-            this.dSocket = new DatagramSocket();
-
-            sendPortCommand(this.welcomingSocket.getLocalPort());
-
-            this.clientSocket = this.welcomingSocket.accept();
-
-            this.out = this.clientSocket.getOutputStream();
+            establishTCP();
 
             Path dir = Paths.get(this.f.getAbsolutePath());
-            try {
-                DirectoryStream<Path> stream = Files.newDirectoryStream(dir);
-                String filename;
-                for (Path entry : stream) {
-                    if (! Files.isDirectory(entry)) {
-                        filename = entry.getFileName().toString();
-                    } else {
-                        filename = "(dir) " + entry.getFileName().toString();
-                    }
-                    this.out.write(new String(filename +  "\t" + Files.size(entry) + "\n").getBytes());
-                }
-                this.out.flush();
 
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
-            }
+            sendList(dir);
 
             this.out.close();
 

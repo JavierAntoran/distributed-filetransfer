@@ -3,6 +3,7 @@ package ftp.server;
 import ftp.FTPService;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -13,18 +14,28 @@ import java.net.ServerSocket;
 public class HandleChunk extends HandleFTPConnection {
 
     private File f;
+    private FileInputStream fis;
 
     private int firstChunk;
     private int lastChunk;
     private byte[] chunkBytes;
 
-    public HandleChunk(File f, int lPort, InetAddress rHost, int rPort) {
+    public HandleChunk(File f, int firstChunk, int lastChunk, int lPort,
+                       InetAddress rHost, int rPort) throws Exception {
 
         super(lPort, rHost, rPort);
+
         this.f = f;
+        this.firstChunk = firstChunk;
+        this.lastChunk = lastChunk;
+
+        this.fis = new FileInputStream(f);
     }
 
     private int getChunk(int nChunk, int chunkSize) throws Exception {
+        /*
+        Returns bytes read
+         */
 
         this.chunkBytes = new byte[chunkSize];
         int dataread;
@@ -37,22 +48,21 @@ public class HandleChunk extends HandleFTPConnection {
     }
 
     private void sendChunk(int nChunk) throws Exception {
-
-        int chunkSize = getChunk(nChunk, FTPService.CHUNKSIZE);
-        this.out.write(this.chunkBytes, 0, chunkSize);
-        System.out.println("file: " + this.f.getPath() + " chunkBytes sent: " + nChunk);
-        sendUDPOK(this.rHost, this.rPortUDP, "chunk: " + nChunk);
+        sendChunk(nChunk, nChunk);
     } //when sending one chunk
 
     private void sendChunk(int firstChunk, int lastChunk) throws Exception {
 
         int i;
+        String msg;
+
         for (i = firstChunk; i <= lastChunk; i++) {
 
             int chunkSize = getChunk(i, FTPService.CHUNKSIZE);
             this.out.write(this.chunkBytes, 0, chunkSize);
             System.out.println("file: " + this.f.getPath() + " chunk sent: " + i);
-            sendUDPOK(this.rHost, this.rPortUDP, "chunk: " + i);
+            msg = "chunk: " + i;
+            sendUDPOK(msg);
         }
 
     }//when sending chunk interval
@@ -67,7 +77,8 @@ public class HandleChunk extends HandleFTPConnection {
         while ((dataLength = this.fis.read(buffer)) > 0) {
             this.out.write(buffer, 0, dataLength);
         }
-        System.out.println("data sent");
+        System.out.println("file: " + f.getPath() + "sent");
+        sendUDPOK(null);
     }
     @Override
     public void run() {
@@ -75,15 +86,7 @@ public class HandleChunk extends HandleFTPConnection {
         System.out.println("FTP Listing handler launched." );
         try {
 
-            this.welcomingSocket = new ServerSocket(this.lPort);
-            this.welcomingSocket.setSoTimeout(this.soTimeOut);
-            this.dSocket = new DatagramSocket();
-
-            sendPortCommand(this.welcomingSocket.getLocalPort());
-
-            this.clientSocket = this.welcomingSocket.accept();
-
-            this.out = this.clientSocket.getOutputStream();
+            establishTCP();
 
 
         } catch (Exception fx) {}
