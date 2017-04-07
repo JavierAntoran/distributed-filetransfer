@@ -15,9 +15,9 @@ import java.util.concurrent.Executors;
  */
 public class UDPFTPServer {
 
-    static final String FTP_ROOT = "ftp/";
+    static final String FTP_ROOT = "ftp_files/";
 
-    private ExecutorService executor;
+    private ExecutorService executor; //executor!!!!! MUAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAH
 
     private DatagramSocket s;
     private DatagramPacket p;
@@ -34,14 +34,15 @@ public class UDPFTPServer {
                 new UDPFTPServer(FTPService.SERVERPORT);
                 break;
             case 1:
-                new UDPFTPServer(Integer.parseInt(args[0]));
+                int serverUDPPort = Integer.parseInt(args[0]);
+                new UDPFTPServer(serverUDPPort);
                 break;
         }
     }
 
     public UDPFTPServer(int port) {
 
-        executor = Executors.newFixedThreadPool(20);
+        executor = Executors.newFixedThreadPool(FTPService.MAXSERVERTHREADS);
 
         try{
 
@@ -112,7 +113,7 @@ public class UDPFTPServer {
             return;
         }
 
-        // TODO implement Get   Handle
+        // TODO implement Get  Handle
     }
 
     private void handleCommand(){
