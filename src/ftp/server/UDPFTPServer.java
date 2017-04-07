@@ -85,15 +85,14 @@ public class UDPFTPServer {
         FTPService.sendUDPmessage(this.s, rx, this.p.getSocketAddress());
     }
 
-    private void listAction(String request) {
-        File file;
-        file = new File(FTP_ROOT);
+    private void listAction() {
+        File dir = new File(FTP_ROOT);
         try {
-            if (Files.isReadable(file.toPath())) {
-                executor.execute(new HandleList(file, 0, this.p.getAddress(), this.p.getPort()));
+            if (Files.isReadable(dir.toPath())) {
+                executor.execute(new HandleList(dir, 0, this.p.getAddress(), this.p.getPort()));
             } else {
                 String rx = FTPService.Response.SERVERROR.toString();
-                rx += " " + file.getPath() + " is not readable";
+                rx += " " + dir.getPath() + " is not readable";
                 FTPService.sendUDPmessage(this.s, rx, this.p.getSocketAddress());
                 return;
             }
@@ -101,18 +100,39 @@ public class UDPFTPServer {
     }
 
     private void getAction(String request) throws IOException {
-        String rx;;
+        String rx;
         String file;
         int[] chunkIntval;
+
         try {
-            file = FTPService.requestedFile(request);
+
+            if ((file = FTPService.getFilenameFromPart(request)) != null){
+                chunkIntval = FTPService.getIntervalFromPart(request);
+            } else {
+                file = FTPService.requestedFile(request);
+                chunkIntval = new int[] {0,0};
+            }
+
+            File f = new File(FTP_ROOT + file);
+            if (f.exists() && !f.isDirectory()) {
+                executor.execute( new HandleChunk(f, chunkIntval[0], chunkIntval[1],
+                        0, this.p.getAddress(), this.p.getPort()) );
+
+            }
+            else {
+                rx = FTPService.Response.SERVERROR.toString();
+                rx += " " + f.getPath() + " does not exist or is a folder";
+                FTPService.sendUDPmessage(this.s, rx, this.p.getSocketAddress());
+                return;
+            }
+
+
         } catch (Exception e) {
             rx = FTPService.Response.SERVERROR.toString();
             rx += " " + e.getMessage();
             FTPService.sendUDPmessage(this.s, rx, this.p.getSocketAddress());
             return;
         }
-
         // TODO implement Get  Handle
     }
 
@@ -126,7 +146,7 @@ public class UDPFTPServer {
                     break;
 
                 case LIST:
-                    this.listAction(sRX);
+                    this.listAction();
                     break;
 
                 case GET:

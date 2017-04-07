@@ -14,22 +14,24 @@ import java.util.regex.Matcher;
 
 public class FTPService {
 
-    public static final int SIZEMAX = 255; // Maximum size of datagram UDP
+    public static final int SIZEMAX = 255; // Maximum size of UDP datagram
     public static final int SERVERPORT = 5000; // default ftp.server port
-    public static final int TIMEOUT = 1000; //suponemos que son ms
+    public static final int TIMEOUT = 1000; //timeout en ms
     public static final int CHUNKSIZE = 1024; //bytes por bloque
+    public static final int MAXSERVERTHREADS = 20; //max concurrent tcp handlers
+
 
     static public enum Command {HELLO, LIST, GET, QUIT, ERROR};
     static public enum Response {WCOME, OK, PORT, SERVERROR, BYE, UNKNOWN};
 
-    public static Command commandFromString(String textcommand){
+    public static Command commandFromString(String textCommand){
 
         String detect = "";
         for (Command k : Command.values()){
             detect += (k + "|");
         }
         detect = detect.substring(0, detect.length() - 1);
-        Matcher expIn = Pattern.compile(detect).matcher(textcommand);
+        Matcher expIn = Pattern.compile(detect).matcher(textCommand);
 
         if (expIn.find()) {
             return Command.valueOf(expIn.group());
@@ -38,14 +40,14 @@ public class FTPService {
         }
     }
 
-    public static Response responseFromString(String textresponse){
+    public static Response responseFromString(String textResponse){
 
         String detect = "";
         for (Response k : Response.values()){
             detect += (k + "|");
         }
         detect = detect.substring(0, detect.length() - 1);
-        Matcher expIn = Pattern.compile(detect).matcher(textresponse);
+        Matcher expIn = Pattern.compile(detect).matcher(textResponse);
 
         if (expIn.find()) {
             return Response.valueOf(expIn.group());
@@ -55,10 +57,10 @@ public class FTPService {
 
     }
 
-    public static String requestedFile(String textcommand) throws Exception{
+    public static String requestedFile(String textCommand) throws Exception{
 
-        String detect = "GET\\s+(.*)";
-        Matcher expIn = Pattern.compile(detect).matcher(textcommand);
+        String detect = "GET\\s+(.*)$";
+        Matcher expIn = Pattern.compile(detect).matcher(textCommand);
 
         if (expIn.find()) {
             return expIn.group(1);
@@ -68,10 +70,10 @@ public class FTPService {
 
     }
 
-    public static int portFromResponse(String textresponse){
+    public static int portFromResponse(String textResponse){
 
-        String detect = "PORT\\s+(\\d+)";
-        Matcher expIn = Pattern.compile(detect).matcher(textresponse);
+        String detect = "PORT\\s+(\\d+)$";
+        Matcher expIn = Pattern.compile(detect).matcher(textResponse);
 
         if (expIn.find()) {
             return Integer.parseInt(expIn.group(1));
