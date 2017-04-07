@@ -3,15 +3,26 @@ package ftp.server;
 import ftp.FTPService;
 
 import java.io.File;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.ServerSocket;
 
 /**
  * Created by StFrancisco on 05/04/2017.
  */
 public class HandleChunk extends HandleFTPConnection {
 
+    private File f;
+
     private int firstChunk;
     private int lastChunk;
     private byte[] chunkBytes;
+
+    public HandleChunk(File f, int lPort, InetAddress rHost, int rPort) {
+
+        super(lPort, rHost, rPort);
+        this.f = f;
+    }
 
     private int getChunk(int nChunk, int chunkSize) throws Exception {
 
@@ -61,37 +72,22 @@ public class HandleChunk extends HandleFTPConnection {
     @Override
     public void run() {
 
-        System.out.println("FTP handler launched, mode: " );
+        System.out.println("FTP Listing handler launched." );
         try {
-            this.toClient = this.welcoming.accept();
-            rHost = this.toClient.getInetAddress();
-            System.out.println("TCP conection established with " + rHost.toString() + ":" + toClient.getPort());
 
-           /* if (this.toClient.getInetAddress().equals(this.lHost) ) { *****???****
-                System.out.println("Conectado a host erroneo");
-            }*/
+            this.welcomingSocket = new ServerSocket(this.lPort);
+            this.welcomingSocket.setSoTimeout(this.soTimeOut);
+            this.dSocket = new DatagramSocket();
 
-            this.out = this.toClient.getOutputStream();
+            sendPortCommand(this.welcomingSocket.getLocalPort());
 
-            if (this.t.equals(task.LIST)) { //averiguamos que accion tomar
-                sendList();
-            } else if (this.t.equals(task.GETFILE)) {
-                sendFile(this.f);
-                this.fis.close();
-            } else if (this.t.equals(task.GETCHUNKS)) {
-                sendChunk(this.firstChunk, this.lastChunk);
-                this.fis.close();
-            }
+            this.clientSocket = this.welcomingSocket.accept();
 
-            this.out.close();
+            this.out = this.clientSocket.getOutputStream();
 
-            this.toClient.close();
-            this.welcoming.close();
-
-            System.out.println("TCP Conection with " + rHost.toString() + ":" + toClient.getPort() + " closed");
-
-            sendUDPOK(this.rHost, this.rPortUDP);
 
         } catch (Exception fx) {}
     }
+
+
 }

@@ -5,32 +5,28 @@ import ftp.FTPService;
 
 import java.io.*;
 import java.net.*;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
- * Created by StFrancisco on 21/03/2017.
+ * Alberto Mur & Javier Antoran
  */
-abstract public class HandleFTPConnection implements Runnable{
+abstract public class HandleFTPConnection implements Runnable {
 
-    protected int soTimeOut = 3000;
+    protected int soTimeOut = FTPService.TIMEOUT;
 
     protected Socket clientSocket;
     protected ServerSocket welcomingSocket;
     protected DatagramSocket dSocket;
 
     protected int lPort;
-    protected InetAddress rAddress;
+    protected InetAddress rHost;
     protected int rPort;
 
     protected OutputStream out;
 
-    public HandleFTPConnection(int lPort, InetAddress rAddress, int rPort){
+    public HandleFTPConnection(int lPort, InetAddress rHost, int rPort){
         this.lPort = lPort;
         this.rPort = rPort;
-        this.rAddress = rAddress;
+        this.rHost = rHost;
     }
 
     protected void sendPortCommand(int port) throws IOException{
@@ -38,7 +34,7 @@ abstract public class HandleFTPConnection implements Runnable{
         String msg = FTPService.Response.PORT.toString();
         msg += " " + port;
 
-        FTPService.sendUDPmessage(this.dSocket, msg, this.rAddress, this.rPort);
+        FTPService.sendUDPmessage(this.dSocket, msg, this.rHost, this.rPort);
         System.out.println("> " + msg);
 
     }
@@ -50,7 +46,7 @@ abstract public class HandleFTPConnection implements Runnable{
             msg = FTPService.Response.OK.toString();
         }
 
-        FTPService.sendUDPmessage(this.dSocket, msg, this.rAddress, this.rPort);
+        FTPService.sendUDPmessage(this.dSocket, msg, this.rHost, this.rPort);
         System.out.println("> " + msg);
     }
 

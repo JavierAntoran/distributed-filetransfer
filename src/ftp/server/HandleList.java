@@ -13,20 +13,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * Created by StFrancisco on 05/04/2017.
+ * Alberto Mur & Javier Antoran.
  */
 public class HandleList extends HandleFTPConnection{
 
     private File f;
 
-    public HandleList(File f, int lPort, InetAddress rAddress, int rPort) throws Exception{
-        super(0, rAddress, rPort);
+    public HandleList(File f, int lPort, InetAddress rHost, int rPort) throws Exception{
+        super(lPort, rHost, rPort);
         this.f = f;
     }
 
     public void run() {
 
-        System.out.println("List FTP handler launched " );
+        System.out.println("FTP Listing handler launched." );
         try {
 
             this.welcomingSocket = new ServerSocket(this.lPort);
