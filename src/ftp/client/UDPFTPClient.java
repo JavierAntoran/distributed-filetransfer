@@ -3,25 +3,34 @@ package ftp.client;
 import ftp.FTPService;
 
 import java.io.*;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.Socket;
+import java.net.*;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * Created by StFrancisco on 21/03/2017.
+ *  Alberto Mur & Javier Antoran.
  */
 public class UDPFTPClient {
 
-    static FTPService.Command com; // ultimo comando enviado
-    static String fileName = ""; //nombre del archivo que pedimos
+    private FTPService.Command com; // ultimo comando enviado
+    private String fileName = ""; //nombre del archivo que pedimos
 
-    static DatagramSocket s;
-    static DatagramPacket packet;
+    private DatagramSocket s;
+    private DatagramPacket packet;
+
+    private int nServers;
+    private InetAddress serverList[];
+    private int serverPorts[];
+    private int serverBW[];
 
     public static void main(String[] args) {
 
+        new UDPFTPClient();
+        //TODO: separate code in constructor into 2 parts. the part run in main method and the constructor
+    }
+
+    public UDPFTPClient() {
         Scanner input = new Scanner(System.in);
 
         byte[] buf = new byte[FTPService.SIZEMAX]; //almacena paquete UDP en rx
@@ -82,7 +91,54 @@ public class UDPFTPClient {
         }
     }
 
-    static void sendHello(InetAddress rHost, int rPort) throws Exception{
+    private void parseServerInfo(File f) {
+        /**
+         * Reads server file and extracts hostname/ip, port and expected bandwith
+         */
+        // TODO: make sure error messages and exceptions are coherent
+        String pattern = "Server\\d+\\s+(.*)\\s+(\\d+)\\s+(\\d+)$";
+        String line;
+        Matcher m;
+
+        if (!f.exists() || f.isDirectory()) {
+            System.out.println("No se ha encontrado archivo de info de servidores");
+            System.exit(1);
+        }
+
+        nServers = 0;
+        Pattern pat = Pattern.compile(pattern);
+
+        try (BufferedReader br = new BufferedReader(new FileReader(f))) {
+
+            while ((line = br.readLine()) != null) {
+
+                m = pat.matcher(line);
+                if(m.find()) {
+                    serverList[nServers] = InetAddress.getByName(m.group(1));
+                    serverPorts[nServers] = Integer.parseInt(m.group(2));
+                    serverBW[nServers] = Integer.parseInt(m.group(3));
+                    nServers ++;
+                } else {
+                    System.out.println("Linea sin informacion encontrada");
+                }
+            }
+
+            if (nServers == 0) {
+                System.out.println("No servers found, exiting");
+                System.exit(1);
+            }
+
+        } catch (UnknownHostException uhx) {
+            System.out.println("Error parsing server name: " + nServers);
+            System.out.println(uhx);
+        } catch (IOException iox) {
+            System.out.println("Error reading server data file");
+            System.out.println(iox);
+        }
+
+    }
+
+    private void sendHello(InetAddress rHost, int rPort) throws Exception{
 
         String receive;
 
@@ -93,7 +149,7 @@ public class UDPFTPClient {
 
     }
 
-    static void parseResponse(String sRX, InetAddress rHost) throws Exception{
+    private void parseResponse(String sRX, InetAddress rHost) throws Exception{
 
         FTPService.Response rRX = FTPService.responseFromString(sRX);
         //parseamos respuesta para obtener 'response'
@@ -137,7 +193,7 @@ public class UDPFTPClient {
         System.out.println(output);
     }
 
-     static private void clientTCPHandler(InetAddress rHost, int rPort) throws Exception {
+    private void clientTCPHandler(InetAddress rHost, int rPort) throws Exception {
 
         Socket stream = new Socket(rHost, rPort); // conecta  servidor remoto en puerto remoto
         System.out.println("Conexion TCP establecida con " + rHost.toString() + ":" + rPort);
@@ -184,5 +240,7 @@ public class UDPFTPClient {
         dataStream.close();
 
     }
+
+    private static void getChunks( ) { }
 
 }
