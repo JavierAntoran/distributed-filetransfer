@@ -37,6 +37,9 @@ public class UDPFTPServer {
                 int serverUDPPort = Integer.parseInt(args[0]);
                 new UDPFTPServer(serverUDPPort);
                 break;
+            default:
+                System.out.println("invalid number of arguments");
+                System.exit(2);
         }
     }
 

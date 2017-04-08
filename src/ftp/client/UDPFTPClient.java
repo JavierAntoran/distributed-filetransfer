@@ -13,12 +13,15 @@ import java.util.regex.Pattern;
  */
 public class UDPFTPClient {
 
-    private FTPService.Command com; // ultimo comando enviado
-    private String fileName = ""; //nombre del archivo que pedimos
+    static final String SERVERFILE = "ftp_files/servers.txt";
 
+    private FTPService.Command com; //Last sent command
+
+    // objetcs for communication
     private DatagramSocket s;
     private DatagramPacket packet;
 
+    // data read from serverfile
     private int nServers;
     private InetAddress serverList[];
     private int serverPorts[];
@@ -26,41 +29,51 @@ public class UDPFTPClient {
 
     public static void main(String[] args) {
 
-        new UDPFTPClient();
-        //TODO: separate code in constructor into 2 parts. the part run in main method and the constructor
+        switch (args.length) {
+            case 0:
+                new UDPFTPClient(0, SERVERFILE);
+                break;
+            case 1:
+                new UDPFTPClient(0, args[0]);
+                break;
+            case 2:
+                new UDPFTPClient(Integer.parseInt(args[1]), args[0]);
+                break;
+            default:
+                System.out.println("invalid number of arguments");
+                System.exit(2);
+        }
+
     }
 
-    public UDPFTPClient() {
-        Scanner input = new Scanner(System.in);
+    public UDPFTPClient(int lport, String serverGFile) {
 
-        byte[] buf = new byte[FTPService.SIZEMAX]; //almacena paquete UDP en rx
+        int i;
+
+        Scanner input = new Scanner(System.in);
+        byte[] buf = new byte[FTPService.SIZEMAX]; //buffer for tx udp packet
         String sRX = ""; //mensaje que recibimos
         String sTX; //mensaje que enviamos
+        String fileName;
 
-        boolean cGet = false; //marca si estamos en rutina de recepcion archivo
-
-        int rPort; //remote UDP port
-        int rPortTCP; //remote TCP port
-        InetAddress rHost; //remote IP
-        String arg_rHost = "10.1.59.102";
 
         try {
-            rHost = InetAddress.getByName(arg_rHost);
-            rPort = FTPService.SERVERPORT;
 
-            s = new DatagramSocket(); //SO elige puerto
-            s.setSoTimeout(FTPService.TIMEOUT); //timeout 1 segundos
-            packet = new DatagramPacket(buf, buf.length);
+            this.s = new DatagramSocket(lport);
+            this.s.setSoTimeout(FTPService.TIMEOUT);
+            this.packet = new DatagramPacket(buf, buf.length);
 
-            sendHello(rHost, rPort); // ejecuta protocolo HELLO
+            for (i = 0; i < this.nServers; i++) {// tries to establish conection with each server
+                sendHello(this.serverList[i], this.serverPorts[i]);
+            }
 
-            while (! sRX.equals( FTPService.Response.BYE.toString())) {
+            while (!sRX.equals( FTPService.Response.BYE.toString())) {
 
                 System.out.print("\n>");
                 sTX = input.nextLine();
-                com = FTPService.commandFromString(sTX); //cogemos comando
+                this.com = FTPService.commandFromString(sTX); //cogemos comando
 
-                if (com.equals(FTPService.Command.GET)) {
+                if (this.com.equals(FTPService.Command.GET)) {
                     fileName = FTPService.requestedFile(sTX); //cogemos archivo pedido
                     File f = new File(fileName);
                     if (f.exists()){
@@ -73,16 +86,16 @@ public class UDPFTPClient {
 
                 FTPService.sendUDPmessage(s, sTX, rHost, rPort);//Hacemos peticion
 
-                s.receive(packet);
-                sRX = new String(packet.getData(),0, packet.getLength());
-                packet.setLength(buf.length);
+                this.s.receive(this.packet);
+                sRX = new String(this.packet.getData(),0, this.packet.getLength());
+                this.packet.setLength(buf.length);
 
-                parseResponse(sRX, packet.getAddress());
+                parseResponse(sRX, this.packet.getAddress());
                 //obtenemos respuesta como string y la interpretamos
             }
 
             System.out.println("Cerrando sesion FTP ...");
-            s.close();
+            this.s.close();
 
         } catch (Exception ax) {
             System.out.println("Exception caught while running ftp.client: \n"
@@ -138,18 +151,24 @@ public class UDPFTPClient {
 
     }
 
-    private void sendHello(InetAddress rHost, int rPort) throws Exception{
+    private void sendHello(InetAddress rHost, int rPort) {
 
         String receive;
+        try {
+            FTPService.sendUDPmessage(s, FTPService.Command.HELLO.toString(), rHost, rPort);
+            s.receive(packet);
+            receive = new String(packet.getData(), 0, packet.getLength());
+            parseResponse(receive, packet.getAddress());
 
-        FTPService.sendUDPmessage(s, FTPService.Command.HELLO.toString(), rHost, rPort);
-        s.receive(packet);
-        receive = new String(packet.getData(),0, packet.getLength());
-        parseResponse(receive, packet.getAddress());
+        } catch (IOException gx) {
+            System.out.println("server " + rHost.getHostName() + ":" +
+             " appears to e down or not responding");
+            System.out.println(gx);
+        }
 
     }
 
-    private void parseResponse(String sRX, InetAddress rHost) throws Exception{
+    private void parseResponse(String sRX, InetAddress rHost) throws IOException{
 
         FTPService.Response rRX = FTPService.responseFromString(sRX);
         //parseamos respuesta para obtener 'response'
@@ -193,7 +212,7 @@ public class UDPFTPClient {
         System.out.println(output);
     }
 
-    private void clientTCPHandler(InetAddress rHost, int rPort) throws Exception {
+    private void clientTCPHandler(InetAddress rHost, int rPort) throws IOException {
 
         Socket stream = new Socket(rHost, rPort); // conecta  servidor remoto en puerto remoto
         System.out.println("Conexion TCP establecida con " + rHost.toString() + ":" + rPort);
@@ -209,7 +228,7 @@ public class UDPFTPClient {
 
     }
 
-    private static void listTCP(Socket stream) throws Exception{
+    private static void listTCP(Socket stream) throws IOException{
 
         String inLine;
         BufferedReader in = new BufferedReader(new InputStreamReader(stream.getInputStream()));
