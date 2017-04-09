@@ -57,7 +57,7 @@ public class FTPService {
 
     }
 
-    public static String requestedFile(String textCommand) throws Exception{
+    public static String requestedFile(String textCommand) throws IOException{
 
         String detect = "GET\\s+(.*)$";
         Matcher expIn = Pattern.compile(detect).matcher(textCommand);
@@ -65,7 +65,7 @@ public class FTPService {
         if (expIn.find()) {
             return expIn.group(1);
         } else {
-            throw new Exception("Missing argument FILE from GET command");
+            throw new IOException("Missing argument FILE from GET command");
         }
 
     }

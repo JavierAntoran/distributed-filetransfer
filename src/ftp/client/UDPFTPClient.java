@@ -15,6 +15,8 @@ public class UDPFTPClient {
 
     static final String SERVERFILE = "ftp_files/servers.txt";
 
+    Scanner input = new Scanner(System.in);
+
     private FTPService.Command com; //Last sent command
 
     // objetcs for communication
@@ -46,61 +48,51 @@ public class UDPFTPClient {
 
     }
 
-    public UDPFTPClient(int lport, String serverGFile) {
+    public UDPFTPClient(int lport, String serverFile) {
 
         int i;
-
-        Scanner input = new Scanner(System.in);
-        byte[] buf = new byte[FTPService.SIZEMAX]; //buffer for tx udp packet
         String sRX = ""; //mensaje que recibimos
         String sTX; //mensaje que enviamos
-        String fileName;
 
+        parseServerInfo(new File(serverFile));
 
         try {
 
             this.s = new DatagramSocket(lport);
             this.s.setSoTimeout(FTPService.TIMEOUT);
-            this.packet = new DatagramPacket(buf, buf.length);
+            this.packet = new DatagramPacket(new byte[FTPService.SIZEMAX], FTPService.SIZEMAX);
 
             for (i = 0; i < this.nServers; i++) {// tries to establish conection with each server
-                sendHello(this.serverList[i], this.serverPorts[i]);
+                if (! sendHello(this.serverList[i], this.serverPorts[i])) {
+                    //TODO: remove server from list if HELLO fails
+                }
             }
 
             while (!sRX.equals( FTPService.Response.BYE.toString())) {
 
                 System.out.print("\n>");
-                sTX = input.nextLine();
+                sTX = this.input.nextLine();
                 this.com = FTPService.commandFromString(sTX); //cogemos comando
 
-                if (this.com.equals(FTPService.Command.GET)) {
-                    fileName = FTPService.requestedFile(sTX); //cogemos archivo pedido
-                    File f = new File(fileName);
-                    if (f.exists()){
-                        System.out.print("file " + fileName + " exists, do you want to overwrite it?\n>");
-                        if (! input.nextLine().equals("YES")){
-                            continue;
-                        }
-                    }
-                }
 
-                FTPService.sendUDPmessage(s, sTX, rHost, rPort);//Hacemos peticion
+                //FTPService.sendUDPmessage(s, sTX, rHost, rPort);//Hacemos peticion
 
                 this.s.receive(this.packet);
                 sRX = new String(this.packet.getData(),0, this.packet.getLength());
-                this.packet.setLength(buf.length);
+                this.packet.setLength(FTPService.SIZEMAX);
 
-                parseResponse(sRX, this.packet.getAddress());
+                handleResponse(sRX, this.packet.getAddress());
                 //obtenemos respuesta como string y la interpretamos
             }
-
-            System.out.println("Cerrando sesion FTP ...");
-            this.s.close();
 
         } catch (Exception ax) {
             System.out.println("Exception caught while running ftp.client: \n"
                     + ax + "\nexiting");
             System.exit(2);
+        } finally {
+
+            System.out.println("Closing FTP session...");
+            this.s.close();
         }
     }
 
@@ -151,25 +143,34 @@ public class UDPFTPClient {
 
     }
 
-    private void sendHello(InetAddress rHost, int rPort) {
+    private boolean sendHello(InetAddress rHost, int rPort) {
+        /**
+         * function that acts both as a HELLO protocol and connection test
+         * returns true if server is up, false if remote host times out
+         */
 
         String receive;
         try {
             FTPService.sendUDPmessage(s, FTPService.Command.HELLO.toString(), rHost, rPort);
             s.receive(packet);
             receive = new String(packet.getData(), 0, packet.getLength());
-            parseResponse(receive, packet.getAddress());
+            handleResponse(receive, packet.getAddress());
 
         } catch (IOException gx) {
             System.out.println("server " + rHost.getHostName() + ":" +
-             " appears to e down or not responding");
+             " appears to be down or not responding");
             System.out.println(gx);
+            return false;
         }
-
+        return true;
     }
 
-    private void parseResponse(String sRX, InetAddress rHost) throws IOException{
+    private void handleCommand() {
+        //TODO: handle given command and await coherent response
+    }
 
+    private void handleResponse(String sRX, InetAddress rHost) throws IOException{
+        //TODO: reformat to work with new server responses.
         FTPService.Response rRX = FTPService.responseFromString(sRX);
         //parseamos respuesta para obtener 'response'
         String output;
@@ -183,7 +184,7 @@ public class UDPFTPClient {
             case PORT:
                 int port = FTPService.portFromResponse(sRX); //obtenemos puerto
                 System.out.println("PORT: " + port);
-                clientTCPHandler(rHost, port); //iniciamos cliente TCP
+                //clientTCPHandler(rHost, port); //iniciamos cliente TCP
 
                 s.receive(packet); //recibimos transfer OK
                 output = new String(packet.getData(), 0, packet.getLength());
@@ -212,7 +213,7 @@ public class UDPFTPClient {
         System.out.println(output);
     }
 
-    private void clientTCPHandler(InetAddress rHost, int rPort) throws IOException {
+    /*private void clientTCPHandler(InetAddress rHost, int rPort) throws IOException {
 
         Socket stream = new Socket(rHost, rPort); // conecta  servidor remoto en puerto remoto
         System.out.println("Conexion TCP establecida con " + rHost.toString() + ":" + rPort);
@@ -227,8 +228,9 @@ public class UDPFTPClient {
         stream.close();
 
     }
+    */
 
-    private static void listTCP(Socket stream) throws IOException{
+    private void listTCP(Socket stream) throws IOException{
 
         String inLine;
         BufferedReader in = new BufferedReader(new InputStreamReader(stream.getInputStream()));
@@ -242,7 +244,7 @@ public class UDPFTPClient {
         System.out.print("\n");
     }
 
-    private static void getTCP(Socket stream, String fileName) throws Exception {
+    private void getTCP(Socket stream, String fileName) throws Exception {
 
         byte buff[] = new byte[10000000];
         File file = new File(fileName);
@@ -260,6 +262,21 @@ public class UDPFTPClient {
 
     }
 
-    private static void getChunks( ) { }
+    private void getAction(String sTX) throws IOException {
 
+        String fileStr = FTPService.requestedFile(sTX);
+        File f = new File(fileStr);
+
+        if (f.exists()) {
+            System.out.print("file " + fileStr + " exists, do you want to overwrite it?\n>");
+            if (! this.input.nextLine().equals("YES")){
+
+                //TODO: load balance here or launch tcp handler to load balance
+
+            }
+        }
+
+
+
+    }
 }
