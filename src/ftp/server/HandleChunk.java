@@ -38,6 +38,7 @@ public class HandleChunk extends HandleFTPConnection {
         int dataread;
         System.out.printf("Reading chunk %d\n", nChunk);
         //TODO: check if amount of bytes read is correct for last chunk
+        fis.getChannel().position((nChunk-1)*FTPService.CHUNKSIZE);
         if ( (dataread = fis.read(chunkBytes) ) <= 0) {
             System.out.println("error leyendo chunkBytes: " + nChunk);
         }
@@ -55,7 +56,6 @@ public class HandleChunk extends HandleFTPConnection {
         String msg;
 
         // Sets read pointer position
-        fis.getChannel().position((firstChunk-1)*FTPService.CHUNKSIZE);
 
         for (i = firstChunk; i <= lastChunk; i++) {
 
