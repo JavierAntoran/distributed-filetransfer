@@ -319,4 +319,13 @@ public class UDPFTPClient {
     private void helloAction() {}
     private void listAction() {}
     private void quitAction() {}
+    private void addServer(InetAddress rHost, int rPort, int BW) {
+
+
+    }
+
+    private void deleteServer(int nServ) {
+
+
+    }
 }
