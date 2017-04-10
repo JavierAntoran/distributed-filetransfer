@@ -17,7 +17,7 @@ public class FTPService {
     public static final int SIZEMAX = 255; // Maximum size of UDP datagram
     public static final int SERVERPORT = 5000; // default ftp.server port
     public static final int TIMEOUT = 1000; //timeout en ms
-    public static final int CHUNKSIZE = 1024; //bytes por bloque
+    public static final int CHUNKSIZE = 1024 * 1024; //bytes por bloque
     public static final int MAXSERVERTHREADS = 20; //max concurrent tcp handlers
 
 
