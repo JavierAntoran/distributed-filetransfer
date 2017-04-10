@@ -306,6 +306,39 @@ public class UDPFTPClient {
 
 
     }
+
+    private String[] getInterval(int fileSize) {
+
+        int i;
+        String interval[] = new String[serverBW.size()];
+        int totalBW = 0;
+        int relativeBW = 0;
+        int chunkOffset = 0;
+        long nChunks = FTPService.getNChunks(fileSize, FTPService.CHUNKSIZE);
+
+        for (i = 0; i < serverBW.size(); i++) {
+            totalBW += serverBW.get(i);
+        }
+
+        for (i = 0; i < serverBW.size(); i++) {
+            relativeBW = Math.round(nChunks * serverBW.get(i) / totalBW);
+            interval[i] = ".part" + (chunkOffset + 1) + "-" + (relativeBW + chunkOffset);
+            chunkOffset += relativeBW;
+        }
+
+        if (chunkOffset - nChunks > 0) {
+            interval[serverBW.size() - 1] = ".part" + (chunkOffset - relativeBW + 1)
+                    + "-" + (chunkOffset - 1);
+        } else if (chunkOffset - nChunks > 0) {
+            interval[serverBW.size() - 1] = ".part" + (chunkOffset - relativeBW + 1)
+                    + "-" + (chunkOffset + 1);
+        }
+
+        return interval;
+
+
+    }
+
     private void quitAction() {}
 
     private void addServer(InetAddress rHost, int rPort, int BW) {
