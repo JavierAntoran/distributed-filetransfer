@@ -37,6 +37,8 @@ abstract class ClientMonitor {
 
     }
 
+    protected static synchronized void writeFile() { } //unused for now
+
 
 
 

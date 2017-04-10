@@ -1,5 +1,7 @@
 package ftp.client;
 
+import ftp.FTPService;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -53,6 +55,26 @@ public class ClientFileHandler extends ClientTCPHandler{
 
     }
 
+    private void getChunks() throws IOException {
+
+        int i;
+        byte buff[] = new byte[FTPService.CHUNKSIZE];
+        InputStream dataStream = stream.getInputStream();
+        FileOutputStream fOut = new FileOutputStream(f);
+        int dataLength;
+
+        for (i = this.firstChunk; i < this.lastChunk; i++) {
+            dataLength = dataStream.read(buff, 0, buff.length);
+            fOut.getChannel().position(FTPService.CHUNKSIZE * (i - 1));
+            fOut.write(buff, 0, dataLength);
+        }
+        fOut.flush();
+
+        fOut.close();
+        dataStream.close();
+
+    }
+
 
 
 
@@ -65,6 +87,8 @@ public class ClientFileHandler extends ClientTCPHandler{
 
             if (!chunkMode) {
                 getFile();
+            } else {
+                getChunk();
             }
 
             this.stream.close();
