@@ -7,9 +7,36 @@ import java.util.ArrayList;
  */
 abstract class ClientMonitor {
 
-    protected static void writeList(ArrayList<String> list) {
+    private static ArrayList<String> mergedList = new ArrayList<String>();
 
+    public static ArrayList<String> getMergedList() {
+        return mergedList;
+    }
 
+    public static void resetList(){
+        mergedList = new ArrayList<String>();
+    }
+
+    protected static synchronized void writeList(ArrayList<String> list) {
+        int i, n;
+
+        for (i = 0; i < list.size(); i++) {
+            for(n = 0; n < mergedList.size(); n++) {
+
+                if (mergedList.get(n).equals(list.get(i))) {
+                    continue;
+                } else {
+                    mergedList.add(list.get(i));
+                }
+
+            }
+        }
 
     }
+
+
+
+
+
+
 }

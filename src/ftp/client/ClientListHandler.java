@@ -4,15 +4,23 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.util.ArrayList;
 
 /**
  *  Alberto Mur & Javier Antoran.
  */
 public class ClientListHandler extends ClientTCPHandler {
 
-    public ClientListHandler(int lPort, InetAddress rHost, int rPort) {
-        super(lPort, rHost, rPort);
+    protected ArrayList<String> fileList = new ArrayList<String>();
+    private int id;
 
+    public ClientListHandler(int lPort, InetAddress rHost, int rPort, int id) {
+        super(lPort, rHost, rPort);
+        this.id = id;
+    }
+
+    public int getId() {
+        return this.id;
     }
 
     @Override
@@ -26,13 +34,18 @@ public class ClientListHandler extends ClientTCPHandler {
             do {//leemos información como caracteres linea a liena
                 inLine = in.readLine();
                 if (inLine != null) {
-                    System.out.println(inLine);
+                    this.fileList.add(inLine);
                 }
             } while (inLine != null);
-            System.out.print("\n");
+
+            ClientMonitor.writeList(this.fileList);
+
+            in.close();
+            this.stream.close();
 
         } catch (IOException iox) {
             System.out.println(iox);
+            //TODO: handle exception if server goes down mid stream by updating serverlist
         }
 
     }
