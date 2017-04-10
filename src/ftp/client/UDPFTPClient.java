@@ -217,65 +217,6 @@ public class UDPFTPClient {
 
     }
 
-    private void handleResponse(String sRX, InetAddress rHost) throws IOException{
-        //TODO: reformat to work with new server responses.
-        FTPService.Response rRX = FTPService.responseFromString(sRX);
-        //parseamos respuesta para obtener 'response'
-        String output;
-
-        switch (rRX) {
-
-            case WCOME:
-                output = ("Welcome to the UDP FTP Server...");
-                break;
-
-            case PORT:
-                int port = FTPService.portFromResponse(sRX); //obtenemos puerto
-                System.out.println("PORT: " + port);
-                //clientTCPHandler(rHost, port); //iniciamos cliente TCP
-
-                s.receive(packet); //recibimos transfer OK
-                output = new String(packet.getData(), 0, packet.getLength());
-                if (FTPService.responseFromString(output).equals(FTPService.Response.OK)) {
-                    output = "Transfer OK";
-                } else { //Si no contiene el OK ??QUE HACER???
-                    output = "Response different from OK";//***********
-                }
-                packet.setLength(FTPService.SIZEMAX);
-
-                break;
-
-            case BYE:
-                output = ("BYE");
-                break;
-
-            case SERVERROR: //Lo mandan cuando el archivo no existe o es carpeta
-                output = ("SERVER ERROR: File does not exist or is a directory");
-                break;
-
-            default: //Incluye unknown y OK. El OK lo recibiriamos desde el TCPhandler
-                output = ("UNKNOWN or out of order command");
-                break;
-        }
-
-        System.out.println(output);
-    }
-
-   /* private void listTCP(Socket stream) throws IOException{
-
-        String inLine;
-        BufferedReader in = new BufferedReader(new InputStreamReader(stream.getInputStream()));
-        System.out.println("\nFilename\tBytes");
-        do  {//leemos información como caracteres linea a liena
-            inLine = in.readLine();
-            if (inLine != null) {
-                System.out.println(inLine);
-            }
-        } while (inLine != null);
-        System.out.print("\n");
-    }
-    */
-
     private void getTCP(Socket stream, String fileName) throws Exception {
 
         byte buff[] = new byte[10000000];
