@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -23,6 +24,8 @@ public class UDPFTPServer {
     private DatagramPacket p;
 
     public static void main(String[] args) {
+        Scanner input;
+        int port;
 
         if (!Files.isReadable(Paths.get(FTP_ROOT))) {
             System.out.println("FTP Root is not readable");
@@ -31,7 +34,10 @@ public class UDPFTPServer {
 
         switch (args.length) {
             case 0:
-                new UDPFTPServer(FTPService.SERVERPORT);
+                input = new Scanner(System.in);
+                System.out.printf("Introduce el numero de puerto (default:%d): ", FTPService.SERVERPORT);
+                port = input.nextInt();
+                new UDPFTPServer(port);
                 break;
             case 1:
                 int serverUDPPort = Integer.parseInt(args[0]);
