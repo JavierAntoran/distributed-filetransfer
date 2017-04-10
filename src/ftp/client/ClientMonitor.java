@@ -19,16 +19,17 @@ abstract class ClientMonitor {
 
     protected static synchronized void writeList(ArrayList<String> list) {
         int i, n;
+        boolean exists;
 
         for (i = 0; i < list.size(); i++) {
+            exists = false;
             for(n = 0; n < mergedList.size(); n++) {
-
                 if (mergedList.get(n).equals(list.get(i))) {
-                    continue;
-                } else {
-                    mergedList.add(list.get(i));
+                    exists = true;
                 }
-
+            }
+            if (!exists) {
+                mergedList.add(list.get(i));
             }
         }
 

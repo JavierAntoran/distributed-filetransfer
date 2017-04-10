@@ -28,6 +28,7 @@ public class ClientListHandler extends ClientTCPHandler {
 
         try {
 
+            establishTCP();
             String inLine;
             BufferedReader in = new BufferedReader(new InputStreamReader(stream.getInputStream()));
 
@@ -43,8 +44,9 @@ public class ClientListHandler extends ClientTCPHandler {
             in.close();
             this.stream.close();
 
-        } catch (IOException iox) {
-            System.out.println(iox);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println(e.getMessage());
             //TODO: handle exception if server goes down mid stream by updating serverlist
         }
 

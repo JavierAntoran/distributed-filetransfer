@@ -90,6 +90,8 @@ public class UDPFTPClient {
         } catch (Exception ax) {
             System.out.println("Exception caught while running ftp.client: \n"
                     + ax + "\nexiting");
+            ax.printStackTrace();
+            System.out.println(ax.getMessage());
             System.exit(2);
         } finally {
 
@@ -287,8 +289,9 @@ public class UDPFTPClient {
                 System.out.println(e.getStackTrace().toString());
             }
 
-            if (FTPService.responseFromString(receive)  != FTPService.Response.PORT) {
-                rPort.set(i, FTPService.portFromResponse(receive));
+            if (FTPService.responseFromString(receive)  == FTPService.Response.PORT) {
+                rPort.add(FTPService.portFromResponse(receive));
+                System.out.println("< Get port " + rPort.get(i));
             } else {
                 deleteServer(i);
                 i--;
@@ -298,7 +301,7 @@ public class UDPFTPClient {
         for (i = 0;  i < this.serverList.size(); i++) {
             executor.execute(new ClientListHandler(0,
                     this.serverList.get(i),
-                    rPort.get(i)));
+                    rPort.get(i),i));
         }
 
         for (i = 0;  i < this.serverList.size(); i++) {
@@ -312,6 +315,11 @@ public class UDPFTPClient {
             }
 
         }
+
+        for (String entry: ClientMonitor.getMergedList()) {
+            System.out.println(entry);
+        }
+
 
 
     }
