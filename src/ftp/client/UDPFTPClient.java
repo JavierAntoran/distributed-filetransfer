@@ -319,13 +319,21 @@ public class UDPFTPClient {
     private void helloAction() {}
     private void listAction() {}
     private void quitAction() {}
+
     private void addServer(InetAddress rHost, int rPort, int BW) {
 
-
+        this.serverList.add(rHost);
+        this.serverPorts.add(rPort);
+        this.serverBW.add(BW);
+        this.nServers++;
     }
 
     private void deleteServer(int nServ) {
 
+        this.serverList.remove(nServ);
+        this.serverPorts.remove(nServ);
+        this.serverBW.remove(nServ);
+        this.nServers--;
 
     }
 }
