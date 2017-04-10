@@ -249,7 +249,7 @@ public class UDPFTPClient {
         System.out.println(output);
     }
 
-    private void listTCP(Socket stream) throws IOException{
+   /* private void listTCP(Socket stream) throws IOException{
 
         String inLine;
         BufferedReader in = new BufferedReader(new InputStreamReader(stream.getInputStream()));
@@ -262,6 +262,7 @@ public class UDPFTPClient {
         } while (inLine != null);
         System.out.print("\n");
     }
+    */
 
     private void getTCP(Socket stream, String fileName) throws Exception {
 
