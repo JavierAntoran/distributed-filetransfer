@@ -219,23 +219,6 @@ public class UDPFTPClient {
 
     }
 
-    private void getTCP(Socket stream, String fileName) throws Exception {
-
-        byte buff[] = new byte[10000000];
-        File file = new File(fileName);
-        InputStream dataStream = stream.getInputStream();
-        FileOutputStream fOut = new FileOutputStream(file);
-        int dataLength;
-        while ((dataLength = dataStream.read(buff, 0, buff.length)) != -1) {
-            fOut.write(buff, 0, dataLength);
-            //System.out.println(buff.toString());
-        }
-        fOut.flush();
-
-        fOut.close();
-        dataStream.close();
-
-    }
 
     private void getAction(String sTX) throws IOException {
 
