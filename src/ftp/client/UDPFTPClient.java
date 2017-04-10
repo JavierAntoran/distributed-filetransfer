@@ -64,26 +64,24 @@ public class UDPFTPClient {
             this.packet = new DatagramPacket(new byte[FTPService.SIZEMAX], FTPService.SIZEMAX);
 
             for (i = 0; i < this.serverList.size(); i++) {// tries to establish conection with each server
-                if (! sendHello(this.serverList.get(i), this.serverPorts.get(i))) {
+                if (!sendHello(this.serverList.get(i), this.serverPorts.get(i))) {
                     //TODO: remove server from list if HELLO fails
                 }
             }
 
-            while (!sRX.equals( FTPService.Response.BYE.toString())) {
+            if (this.serverList.size() != 0) {
 
-                System.out.print("ftp>");
-                sTX = this.input.nextLine();
-                this.com = FTPService.commandFromString(sTX); //cogemos comando
+                while (!sRX.equals(FTPService.Response.BYE.toString())) {
 
+                    System.out.print("ftp>");
+                    sTX = this.input.nextLine();
+                    this.com = FTPService.commandFromString(sTX); //cogemos comando
 
-                //FTPService.sendUDPmessage(s, sTX, rHost, rPort);//Hacemos peticion
-
-                this.s.receive(this.packet);
-                sRX = new String(this.packet.getData(),0, this.packet.getLength());
-                this.packet.setLength(FTPService.SIZEMAX);
-
-                handleResponse(sRX, this.packet.getAddress());
-                //obtenemos respuesta como string y la interpretamos
+                    sendCommand(sTX);
+                }
+            } else {
+                System.out.println("No running servers found");
+                System.exit(1);
             }
 
         } catch (Exception ax) {
@@ -119,13 +117,13 @@ public class UDPFTPClient {
             while ((line = br.readLine()) != null) {
 
                 m = pat.matcher(line);
-                if(m.find()) {
+                if (m.find()) {
                     serverList.add(InetAddress.getByName(m.group(1)));
                     serverPorts.add(Integer.parseInt(m.group(2)));
                     serverBW.add(Integer.parseInt(m.group(3)));
-                    nServers ++;
+                    nServers++;
                 } else {
-                    System.out.printf("Bad format line %d: %s\n", nServers+1, line);
+                    System.out.printf("Bad format line %d: %s\n", nServers + 1, line);
                 }
             }
 
@@ -144,30 +142,67 @@ public class UDPFTPClient {
 
     }
 
+    /**
+     * Acts both as a HELLO protocol and connection test
+     * returns true if server is up, false if remote host times out
+     * or another @IOException occurs
+     *
+     * @param rHost
+     * @param rPort
+     * @return
+     */
     private boolean sendHello(InetAddress rHost, int rPort) {
-        /**
-         * function that acts both as a HELLO protocol and connection test
-         * returns true if server is up, false if remote host times out
-         */
+
 
         String receive;
         try {
             FTPService.sendUDPmessage(s, FTPService.Command.HELLO.toString(), rHost, rPort);
             s.receive(packet);
             receive = new String(packet.getData(), 0, packet.getLength());
+
+
             handleResponse(receive, packet.getAddress());
 
-        } catch (IOException gx) {
+        } catch (SocketTimeoutException ste) {
             System.out.println("server " + rHost.getHostName() + ":" +
-             " appears to be down or not responding");
-            System.out.println(gx);
+                    " appears to be down or not responding");
+            System.out.println(ste.getStackTrace().toString()) ;
+        } catch (IOException gx) {
+            System.out.println(gx.getStackTrace().toString()) ;
             return false;
         }
         return true;
     }
 
-    private void handleCommand() {
-        //TODO: handle given command and await coherent response
+    private void sendCommand(String command) {
+
+        FTPService.Command cRX = FTPService.commandFromString(command);
+        try {
+            switch (cRX) {
+                case HELLO:
+                    this.helloAction();
+                    break;
+
+                case LIST:
+                    this.listAction();
+                    break;
+
+                case GET:
+                    this.getAction(command);
+                    break;
+
+                case QUIT:
+                    this.quitAction();
+                    break;
+
+                default:
+                    System.out.println("Unknown command");
+                    break;
+            }
+        } catch (IOException e) {
+            System.out.println(e.getStackTrace().toString());
+        }
+
     }
 
     private void handleResponse(String sRX, InetAddress rHost) throws IOException{
@@ -280,4 +315,8 @@ public class UDPFTPClient {
 
 
     }
+
+    private void helloAction() {}
+    private void listAction() {}
+    private void quitAction() {}
 }
