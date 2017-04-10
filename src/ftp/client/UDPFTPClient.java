@@ -71,7 +71,7 @@ public class UDPFTPClient {
 
             while (!sRX.equals( FTPService.Response.BYE.toString())) {
 
-                System.out.print("\n>");
+                System.out.print("ftp>");
                 sTX = this.input.nextLine();
                 this.com = FTPService.commandFromString(sTX); //cogemos comando
 
