@@ -4,7 +4,10 @@ import ftp.FTPService;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -214,27 +217,86 @@ public class UDPFTPClient {
                     break;
             }
         } catch (IOException e) {
-            System.out.println(e.getStackTrace().toString());
+            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
 
     }
 
 
-    private void getAction(String sTX) throws IOException {
+    private void getAction(String command) throws IOException {
 
-        String fileStr = FTPService.requestedFile(sTX);
-        File f = new File(fileStr);
+        int i;
+        String receive = "";
+        ArrayList<Integer> rPort = new ArrayList<Integer>();
+        Pattern p;
+        Matcher m;
+        int fileSize = 0;
+        String reqFile;
+        File file;
 
-        if (f.exists()) {
-            System.out.print("file " + fileStr + " exists, do you want to overwrite it?\n>");
-            if (! this.input.nextLine().equals("YES")){
+        ArrayList<String> list = ClientMonitor.getMergedList();
 
-                //TODO: load balance here or launch tcp handler to load balance
+        reqFile = FTPService.requestedFile(command);
 
+        p = Pattern.compile("(.*)\\t(\\d+)$");
+
+        for(i = 0; i < list.size() && fileSize == 0; i++) {
+            m = p.matcher(list.get(i));
+            if (m.find() && m.group(1).equals(reqFile)) {
+                fileSize = Integer.parseInt(m.group(2));
             }
         }
 
+        if ( fileSize != 0 ) {
 
+            file = Files.createFile(Paths.get(reqFile)).toFile();
+            String[] parts = getInterval(fileSize);
+            int intval[];
+
+            try {
+                for (i = 0; i < this.serverList.size(); i++) {
+
+                        FTPService.sendUDPmessage(s,
+                                FTPService.Command.GET.toString() + " " + reqFile + parts[i],
+                                this.serverList.get(i),
+                                this.serverPorts.get(i));
+
+                        s.receive(packet);
+
+                        receive = FTPService.stringFromDatagramPacket(packet);
+
+                        System.out.println("< " + FTPService.stringFromDatagramPacket(packet));
+
+                        if (FTPService.responseFromString(receive)  == FTPService.Response.PORT) {
+                            rPort.add(FTPService.portFromResponse(receive));
+                            System.out.println("< Get port " + rPort.get(i));
+                            intval = FTPService.getIntervalFromPart(reqFile + parts[i]);
+                            executor.execute(new ClientFileHandler(0,
+                                    this.serverList.get(i),
+                                    rPort.get(i),i,file,intval[0],intval[1]));
+                        }
+
+                }
+
+                s.setSoTimeout(0);
+                for (i = 0;  i < this.serverList.size(); i++) {
+                    try {
+                        s.receive(packet);
+                        System.out.println("< " + FTPService.stringFromDatagramPacket(packet)
+                                + " from " + packet.getAddress().getHostAddress()
+                                + ":" + packet.getPort());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        System.out.println(e.getMessage());
+                    }
+
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                System.out.println(e.getMessage());
+            }
+        }
 
     }
 
@@ -299,11 +361,15 @@ public class UDPFTPClient {
 
         }
 
-        for (String entry: ClientMonitor.getMergedList()) {
-            System.out.println(entry);
+        try {
+            ArrayList<String> list = ClientMonitor.getMergedList();
+            for (String entry : list) {
+                System.out.println(entry);
+            }
+        } catch (ConcurrentModificationException e) {
+            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
-
-
 
     }
 
