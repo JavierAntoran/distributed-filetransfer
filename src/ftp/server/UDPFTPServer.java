@@ -58,7 +58,7 @@ public class UDPFTPServer {
             s = new DatagramSocket(port); //Este escucha
             p = new DatagramPacket(new byte[FTPService.SIZEMAX], FTPService.SIZEMAX);
 
-            System.out.println("Server is listening on " + port);
+            System.out.println("Server is listening on " + s.getLocalPort());
 
             while (true) {
 
