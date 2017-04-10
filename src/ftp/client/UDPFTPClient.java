@@ -6,6 +6,8 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,15 +22,18 @@ public class UDPFTPClient {
 
     private FTPService.Command com; //Last sent command
 
+    private ExecutorService executor;
+
     // objetcs for communication
     private DatagramSocket s;
     private DatagramPacket packet;
 
     // data read from serverfile
+    private File serverFile;
     private int nServers;
-    ArrayList<InetAddress> serverList = new ArrayList<InetAddress>();
-    ArrayList<Integer> serverPorts = new ArrayList<Integer>();
-    ArrayList<Integer> serverBW = new ArrayList<Integer>();
+    ArrayList<InetAddress> serverList;
+    ArrayList<Integer> serverPorts;
+    ArrayList<Integer> serverBW;
 
     public static void main(String[] args) {
 
@@ -49,13 +54,15 @@ public class UDPFTPClient {
 
     }
 
-    public UDPFTPClient(int lport, String serverFile) {
+    public UDPFTPClient(int lport, String serverFilename) {
+
+        executor = Executors.newFixedThreadPool(FTPService.MAXSERVERTHREADS);
 
         int i;
         String sRX = ""; //mensaje que recibimos
         String sTX; //mensaje que enviamos
 
-        parseServerInfo(new File(serverFile));
+        this.serverFile = new File(serverFilename);
 
         try {
 
@@ -63,11 +70,7 @@ public class UDPFTPClient {
             this.s.setSoTimeout(FTPService.TIMEOUT);
             this.packet = new DatagramPacket(new byte[FTPService.SIZEMAX], FTPService.SIZEMAX);
 
-            for (i = 0; i < this.serverList.size(); i++) {// tries to establish conection with each server
-                if (!sendHello(this.serverList.get(i), this.serverPorts.get(i))) {
-                    //TODO: remove server from list if HELLO fails
-                }
-            }
+            helloAction();
 
             if (this.serverList.size() != 0) {
 
@@ -112,6 +115,11 @@ public class UDPFTPClient {
         nServers = 0;
         Pattern pat = Pattern.compile(pattern);
 
+        serverList = new ArrayList<InetAddress>();
+        serverPorts = new ArrayList<Integer>();
+        serverBW = new ArrayList<Integer>();
+        nServers = 0;
+
         try (BufferedReader br = new BufferedReader(new FileReader(f))) {
 
             while ((line = br.readLine()) != null) {
@@ -153,18 +161,22 @@ public class UDPFTPClient {
      */
     private boolean sendHello(InetAddress rHost, int rPort) {
 
-
         String receive;
         try {
             FTPService.sendUDPmessage(s, FTPService.Command.HELLO.toString(), rHost, rPort);
             s.receive(packet);
-            receive = new String(packet.getData(), 0, packet.getLength());
+
+            receive = FTPService.stringFromDatagramPacket(packet);
+
+            System.out.println ("< " + FTPService.stringFromDatagramPacket(packet));
 
 
-            handleResponse(receive, packet.getAddress());
+            if (FTPService.responseFromString(receive)  != FTPService.Response.WCOME) {
+                return false;
+            }
 
         } catch (SocketTimeoutException ste) {
-            System.out.println("server " + rHost.getHostName() + ":" +
+            System.out.println("Server " + rHost.getHostName() + ":" +
                     " appears to be down or not responding");
             System.out.println(ste.getStackTrace().toString()) ;
         } catch (IOException gx) {
@@ -300,8 +312,68 @@ public class UDPFTPClient {
 
     }
 
-    private void helloAction() {}
-    private void listAction() {}
+    private void helloAction() {
+        int i;
+
+        parseServerInfo(this.serverFile);
+
+        for (i = 0; i < this.serverList.size(); i++) {
+            if (!sendHello(this.serverList.get(i), this.serverPorts.get(i))) {
+                this.deleteServer(i);
+                i--;
+            }
+        }
+    }
+
+    private void listAction() {
+        int i;
+        String receive = "";
+        ArrayList<Integer> rPort = new ArrayList<Integer>();
+
+        for (i = 0; i < this.serverList.size(); i++) {
+            try {
+                FTPService.sendUDPmessage(s,
+                        FTPService.Command.LIST.toString(),
+                        this.serverList.get(i),
+                        this.serverPorts.get(i));
+
+                s.receive(packet);
+
+                receive = FTPService.stringFromDatagramPacket(packet);
+
+                System.out.println("< " + FTPService.stringFromDatagramPacket(packet));
+            } catch (IOException e) {
+                System.out.println(e.getStackTrace().toString());
+            }
+
+            if (FTPService.responseFromString(receive)  != FTPService.Response.PORT) {
+                rPort.set(i, FTPService.portFromResponse(receive));
+            } else {
+                deleteServer(i);
+                i--;
+            }
+        }
+
+        for (i = 0;  i < this.serverList.size(); i++) {
+            executor.execute(new ClientListHandler(0,
+                    this.serverList.get(i),
+                    rPort.get(i)));
+        }
+
+        for (i = 0;  i < this.serverList.size(); i++) {
+            try {
+                s.receive(packet);
+                System.out.println("< " + FTPService.stringFromDatagramPacket(packet)
+                        + " from " + packet.getAddress().getHostAddress()
+                        + ":" + packet.getPort());
+            } catch (IOException e) {
+                System.out.println(e.getStackTrace().toString());
+            }
+
+        }
+
+
+    }
     private void quitAction() {}
 
     private void addServer(InetAddress rHost, int rPort, int BW) {
