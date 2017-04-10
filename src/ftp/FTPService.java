@@ -135,7 +135,7 @@ public class FTPService {
     }
 
 
-    public static long getNChunks(int fileSize, int chunkSize) {
+    public static long getNChunks(long fileSize, int chunkSize) {
 
         long chunks = (fileSize % chunkSize == 0) ? (fileSize / chunkSize)
                                               : (fileSize / chunkSize + 1);
