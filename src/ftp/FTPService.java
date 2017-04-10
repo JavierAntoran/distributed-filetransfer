@@ -24,7 +24,7 @@ public class FTPService {
     static public enum Command {HELLO, LIST, GET, QUIT, ERROR};
     static public enum Response {WCOME, OK, PORT, SERVERROR, BYE, UNKNOWN};
 
-    public static stringFromDatagramPacket(DatagramPacket dgp) {
+    public static String stringFromDatagramPacket(DatagramPacket dgp) {
         return new String (dgp.getData (),dgp.getOffset(), dgp.getLength());
     }
 
