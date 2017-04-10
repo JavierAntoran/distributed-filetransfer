@@ -24,6 +24,10 @@ public class FTPService {
     static public enum Command {HELLO, LIST, GET, QUIT, ERROR};
     static public enum Response {WCOME, OK, PORT, SERVERROR, BYE, UNKNOWN};
 
+    public static stringFromDatagramPacket(DatagramPacket dgp) {
+        return new String (dgp.getData (),dgp.getOffset(), dgp.getLength());
+    }
+
     public static Command commandFromString(String textCommand){
 
         String detect = "";
