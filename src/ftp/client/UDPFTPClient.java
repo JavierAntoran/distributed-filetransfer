@@ -4,6 +4,7 @@ import ftp.FTPService;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,9 +26,9 @@ public class UDPFTPClient {
 
     // data read from serverfile
     private int nServers;
-    private InetAddress serverList[];
-    private int serverPorts[];
-    private int serverBW[];
+    ArrayList<InetAddress> serverList = new ArrayList<InetAddress>();
+    ArrayList<Integer> serverPorts = new ArrayList<Integer>();
+    ArrayList<Integer> serverBW = new ArrayList<Integer>();
 
     public static void main(String[] args) {
 
@@ -62,8 +63,8 @@ public class UDPFTPClient {
             this.s.setSoTimeout(FTPService.TIMEOUT);
             this.packet = new DatagramPacket(new byte[FTPService.SIZEMAX], FTPService.SIZEMAX);
 
-            for (i = 0; i < this.nServers; i++) {// tries to establish conection with each server
-                if (! sendHello(this.serverList[i], this.serverPorts[i])) {
+            for (i = 0; i < this.serverList.size(); i++) {// tries to establish conection with each server
+                if (! sendHello(this.serverList.get(i), this.serverPorts.get(i))) {
                     //TODO: remove server from list if HELLO fails
                 }
             }
@@ -101,7 +102,7 @@ public class UDPFTPClient {
          * Reads server file and extracts hostname/ip, port and expected bandwith
          */
         // TODO: make sure error messages and exceptions are coherent
-        String pattern = "Server\\d+\\s+(.*)\\s+(\\d+)\\s+(\\d+)$";
+        String pattern = ".*\\s+(.*)\\s+(\\d+)\\s+(\\d+)$";
         String line;
         Matcher m;
 
@@ -119,12 +120,12 @@ public class UDPFTPClient {
 
                 m = pat.matcher(line);
                 if(m.find()) {
-                    serverList[nServers] = InetAddress.getByName(m.group(1));
-                    serverPorts[nServers] = Integer.parseInt(m.group(2));
-                    serverBW[nServers] = Integer.parseInt(m.group(3));
+                    serverList.add(InetAddress.getByName(m.group(1)));
+                    serverPorts.add(Integer.parseInt(m.group(2)));
+                    serverBW.add(Integer.parseInt(m.group(3)));
                     nServers ++;
                 } else {
-                    System.out.println("Linea sin informacion encontrada");
+                    System.out.printf("Bad format line %d: %s\n", nServers+1, line);
                 }
             }
 
@@ -135,10 +136,10 @@ public class UDPFTPClient {
 
         } catch (UnknownHostException uhx) {
             System.out.println("Error parsing server name: " + nServers);
-            System.out.println(uhx);
+            System.out.println(uhx.getStackTrace().toString());
         } catch (IOException iox) {
             System.out.println("Error reading server data file");
-            System.out.println(iox);
+            System.out.println(iox.getStackTrace().toString());
         }
 
     }
