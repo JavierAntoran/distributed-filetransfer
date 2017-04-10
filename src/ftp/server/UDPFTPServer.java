@@ -109,7 +109,7 @@ public class UDPFTPServer {
 
         try {
 
-            if ((file = FTPService.getFilenameFromPart(request)) != null){
+            if ((file = FTPService.getFilenameFromPart(FTPService.requestedFile(request))) != null){
                 chunkIntval = FTPService.getIntervalFromPart(request);
             } else {
                 file = FTPService.requestedFile(request);
@@ -117,6 +117,7 @@ public class UDPFTPServer {
             }
 
             File f = new File(FTP_ROOT + file);
+
             if (f.exists() && !f.isDirectory()) {
                 executor.execute( new HandleChunk(f, chunkIntval[0], chunkIntval[1],
                         0, this.p.getAddress(), this.p.getPort()) );
@@ -136,7 +137,6 @@ public class UDPFTPServer {
             FTPService.sendUDPmessage(this.s, rx, this.p.getSocketAddress());
             return;
         }
-        // TODO implement Get  Handle
     }
 
     private void handleCommand(){
