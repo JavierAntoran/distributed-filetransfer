@@ -74,7 +74,7 @@ public class UDPFTPClient {
 
             if (this.serverList.size() != 0) {
 
-                while (!sRX.equals(FTPService.Response.BYE.toString())) {
+                while (! (this.com == FTPService.Command.QUIT)) {
 
                     System.out.print("ftp>");
                     sTX = this.input.nextLine();
@@ -433,7 +433,26 @@ public class UDPFTPClient {
     }
 
     private void quitAction() {
+        int i;
 
+        for (i = 0; i < this.serverList.size(); i++) {
+            String receive;
+            try {
+                FTPService.sendUDPmessage(s, FTPService.Command.QUIT.toString(), this.serverList.get(i).getAddr(), this.serverList.get(i).getPort());
+                s.receive(packet);
+
+                receive = FTPService.stringFromDatagramPacket(packet);
+
+                System.out.println ("< " + FTPService.stringFromDatagramPacket(packet));
+
+            } catch (SocketTimeoutException ste) {
+                System.out.println("Server " + rHost.getHostName() + ":" +
+                        " appears to be down or not responding");
+                System.out.println(ste.getStackTrace().toString()) ;
+            } catch (IOException gx) {
+                System.out.println(gx.getStackTrace().toString()) ;
+            }
+        }
     }
 
     private void addServer(InetAddress rHost, int rPort, int BW) {
