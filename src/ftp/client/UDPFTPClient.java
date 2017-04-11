@@ -1,6 +1,7 @@
 package ftp.client;
 
 import ftp.FTPService;
+import ftp.client.Session.RemoteServer;
 
 import java.io.*;
 import java.net.*;
@@ -33,10 +34,7 @@ public class UDPFTPClient {
 
     // data read from serverfile
     private File serverFile;
-    private int nServers;
-    ArrayList<InetAddress> serverList;
-    ArrayList<Integer> serverPorts;
-    ArrayList<Integer> serverBW;
+    ArrayList<RemoteServer> serverList;
 
     public static void main(String[] args) {
 
@@ -61,7 +59,6 @@ public class UDPFTPClient {
 
         executor = Executors.newFixedThreadPool(FTPService.MAXSERVERTHREADS);
 
-        int i;
         String sRX = ""; //mensaje que recibimos
         String sTX; //mensaje que enviamos
 
@@ -111,19 +108,17 @@ public class UDPFTPClient {
         String pattern = ".*\\s+(.*)\\s+(\\d+)\\s+(\\d+)$";
         String line;
         Matcher m;
+        int nServers = 0;
 
         if (!f.exists() || f.isDirectory()) {
             System.out.println("No se ha encontrado archivo de info de servidores");
             System.exit(1);
         }
 
-        nServers = 0;
         Pattern pat = Pattern.compile(pattern);
 
-        serverList = new ArrayList<InetAddress>();
-        serverPorts = new ArrayList<Integer>();
-        serverBW = new ArrayList<Integer>();
-        nServers = 0;
+        serverList = new ArrayList<RemoteServer>();
+
 
         try (BufferedReader br = new BufferedReader(new FileReader(f))) {
 
@@ -131,10 +126,9 @@ public class UDPFTPClient {
 
                 m = pat.matcher(line);
                 if (m.find()) {
-                    serverList.add(InetAddress.getByName(m.group(1)));
-                    serverPorts.add(Integer.parseInt(m.group(2)));
-                    serverBW.add(Integer.parseInt(m.group(3)));
-                    nServers++;
+                    serverList.add(new RemoteServer(InetAddress.getByName(m.group(1)),
+                            Integer.parseInt(m.group(2)),
+                            Integer.parseInt(m.group(3))));
                 } else {
                     System.out.printf("Bad format line %d: %s\n", nServers + 1, line);
                 }
@@ -191,6 +185,10 @@ public class UDPFTPClient {
         return true;
     }
 
+    /**
+     *
+     * @param command
+     */
     private void sendCommand(String command) {
 
         FTPService.Command cRX = FTPService.commandFromString(command);
@@ -223,12 +221,11 @@ public class UDPFTPClient {
 
     }
 
-
     private void getAction(String command) throws IOException {
 
         int i;
         String receive = "";
-        ArrayList<Integer> rPort = new ArrayList<Integer>();
+        ArrayList<Integer> rPortTCP = new ArrayList<Integer>();
         Pattern p;
         Matcher m;
         int fileSize = 0;
@@ -236,20 +233,27 @@ public class UDPFTPClient {
         File file;
 
         ArrayList<String> list = ClientMonitor.getMergedList();
+        //sacamos info de archivos de LIST que ya se habra hecho
 
         reqFile = FTPService.requestedFile(command);
+        //sacamos archivo que queremos
 
         p = Pattern.compile("(.*)\\t(\\d+)$");
+        //buscamos en el list
+
 
         for(i = 0; i < list.size() && fileSize == 0; i++) {
             m = p.matcher(list.get(i));
             if (m.find() && m.group(1).equals(reqFile)) {
                 fileSize = Integer.parseInt(m.group(2));
+                //buscamos archivo en la lista que tiene el nombre del pedido
             }
         }
 
-        if ( fileSize != 0 ) {
+        if ( fileSize != 0 ) { //nos aseguramos de que archivo existe
 
+            file = Files.createFile(Paths.get(reqFile)).toFile();
+            String[] intervalStr = getInterval(fileSize); //obtenemos strings de partes
             String[] parts = getInterval(fileSize);
             int intval[];
 
@@ -257,11 +261,11 @@ public class UDPFTPClient {
                 for (i = 0; i < this.serverList.size(); i++) {
 
                         FTPService.sendUDPmessage(s,
-                                FTPService.Command.GET.toString() + " " + reqFile + parts[i],
-                                this.serverList.get(i),
-                                this.serverPorts.get(i));
+                                FTPService.Command.GET.toString() + " " + reqFile + intervalStr[i],
+                                this.serverList.get(i).getAddr(),
+                                this.serverList.get(i).getPort()); //enviamos peticion
 
-                        s.receive(packet);
+                        s.receive(packet); //recibimos respuesta
 
                         receive = FTPService.stringFromDatagramPacket(packet);
 
@@ -329,7 +333,7 @@ public class UDPFTPClient {
         parseServerInfo(this.serverFile);
 
         for (i = 0; i < this.serverList.size(); i++) {
-            if (!sendHello(this.serverList.get(i), this.serverPorts.get(i))) {
+            if (!sendHello(this.serverList.get(i).getAddr(), this.serverList.get(i).getPort())) {
                 this.deleteServer(i);
                 i--;
             }
@@ -339,14 +343,14 @@ public class UDPFTPClient {
     private void listAction() {
         int i;
         String receive = "";
-        ArrayList<Integer> rPort = new ArrayList<Integer>();
+        ArrayList<Integer> rPortsTCP = new ArrayList<Integer>();
 
         for (i = 0; i < this.serverList.size(); i++) {
             try {
                 FTPService.sendUDPmessage(s,
                         FTPService.Command.LIST.toString(),
-                        this.serverList.get(i),
-                        this.serverPorts.get(i));
+                        this.serverList.get(i).getAddr(),
+                        this.serverList.get(i).getPort());
 
                 s.receive(packet);
 
@@ -358,8 +362,8 @@ public class UDPFTPClient {
             }
 
             if (FTPService.responseFromString(receive)  == FTPService.Response.PORT) {
-                rPort.add(FTPService.portFromResponse(receive));
-                System.out.println("< Get port " + rPort.get(i));
+                rPortsTCP.add(FTPService.portFromResponse(receive));
+                System.out.println("< Get port " + rPortsTCP.get(i));
             } else {
                 deleteServer(i);
                 i--;
@@ -368,8 +372,8 @@ public class UDPFTPClient {
 
         for (i = 0;  i < this.serverList.size(); i++) {
             executor.execute(new ClientListHandler(0,
-                    this.serverList.get(i),
-                    rPort.get(i),i));
+                    this.serverList.get(i).getAddr(),
+                    rPortsTCP.get(i),i));
         }
 
         for (i = 0;  i < this.serverList.size(); i++) {
@@ -399,27 +403,27 @@ public class UDPFTPClient {
     private String[] getInterval(int fileSize) {
 
         int i;
-        String interval[] = new String[serverBW.size()];
+        String interval[] = new String[serverList.size()];
         int totalBW = 0;
         int relativeBW = 0;
         int chunkOffset = 0;
         long nChunks = FTPService.getNChunks(fileSize, FTPService.CHUNKSIZE);
 
-        for (i = 0; i < serverBW.size(); i++) {
-            totalBW += serverBW.get(i);
+        for (i = 0; i < serverList.size(); i++) {
+            totalBW += serverList.get(i).getBw();
         }
 
-        for (i = 0; i < serverBW.size(); i++) {
-            relativeBW = Math.round(nChunks * serverBW.get(i) / totalBW);
+        for (i = 0; i < serverList.size(); i++) {
+            relativeBW = Math.round(nChunks * serverList.get(i).getBw() / totalBW);
             interval[i] = ".part" + (chunkOffset + 1) + "-" + (relativeBW + chunkOffset);
             chunkOffset += relativeBW;
         }
 
         if (chunkOffset - nChunks > 0) {
-            interval[serverBW.size() - 1] = ".part" + (chunkOffset - relativeBW + 1)
+            interval[serverList.size() - 1] = ".part" + (chunkOffset - relativeBW + 1)
                     + "-" + (chunkOffset - 1);
         } else if (chunkOffset - nChunks > 0) {
-            interval[serverBW.size() - 1] = ".part" + (chunkOffset - relativeBW + 1)
+            interval[serverList.size() - 1] = ".part" + (chunkOffset - relativeBW + 1)
                     + "-" + (chunkOffset + 1);
         }
 
