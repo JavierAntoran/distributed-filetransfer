@@ -31,7 +31,7 @@ abstract public class HandleFTPConnection implements Runnable {
 
     //protected abstract void sendInfo();
 
-    protected void establishTCP() throws Exception {
+    protected void establishTCP() throws IOException {
 
         this.welcomingSocket = new ServerSocket(this.lPort);
         this.welcomingSocket.setSoTimeout(this.soTimeOut);
