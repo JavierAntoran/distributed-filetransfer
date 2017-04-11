@@ -18,10 +18,11 @@ public class FTPService {
     public static final int SERVERPORT = 5000; // default ftp.server port
     public static final int TIMEOUT = 1000; //timeout en ms
     public static final int CHUNKSIZE = 1024 * 1024; //bytes por bloque
+    public static final int BWCHECKSIZE = 3; //size if data used to check bandwidth
     public static final int MAXSERVERTHREADS = 20; //max concurrent tcp handlers
 
 
-    static public enum Command {HELLO, LIST, GET, QUIT, ERROR};
+    static public enum Command {HELLO, LIST, GET, QUIT, ERROR, CHECKBW};
     static public enum Response {WCOME, OK, PORT, SERVERROR, BYE, UNKNOWN};
 
     public static String stringFromDatagramPacket(DatagramPacket dgp) {

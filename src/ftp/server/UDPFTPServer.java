@@ -145,6 +145,10 @@ public class UDPFTPServer {
         }
     }
 
+    private void checkBWAction() {
+        executor.execute(new BandWidthCheck(0, this.p.getAddress(), this.p.getPort()));
+    }
+
     private void handleCommand(){
         String sRX = new String(p.getData(),0, p.getLength());
         FTPService.Command cRX = FTPService.commandFromString(sRX);
@@ -160,6 +164,10 @@ public class UDPFTPServer {
 
                 case GET:
                     this.getAction(sRX);
+                    break;
+
+                case CHECKBW:
+                    this.checkBWAction();
                     break;
 
                 case QUIT:

@@ -58,7 +58,6 @@ public class ClientFileHandler extends ClientTCPHandler{
         FileOutputStream fOut = new FileOutputStream(f);
         int dataLength;
 
-        //fOut.getChannel().position(FTPService.CHUNKSIZE * (this.firstChunk - 1));
         while ((dataLength = dataStream.read(buff)) != -1) {
             fOut.write(buff, 0, dataLength);
         }

@@ -26,7 +26,7 @@ public class UDPFTPClient {
 
     private FTPService.Command com; //Last sent command
 
-    private ExecutorService executor;
+    public static ExecutorService executor;
 
     // objetcs for communication
     private DatagramSocket s;
@@ -203,6 +203,10 @@ public class UDPFTPClient {
 
                 case GET:
                     this.getAction(command);
+                    break;
+
+                case CHECKBW:
+                    this.checkBWAction();
                     break;
 
                 case QUIT:
@@ -396,6 +400,62 @@ public class UDPFTPClient {
             System.out.println(e.getMessage());
         }
 
+    }
+
+    private void checkBWAction(){
+
+        int i;
+        String receive = "";
+        ArrayList<Integer> rPortsTCP = new ArrayList<Integer>();
+
+        for (i = 0; i < this.serverList.size(); i++) {
+            try {
+                FTPService.sendUDPmessage(s,
+                        FTPService.Command.CHECKBW.toString(),
+                        this.serverList.get(i).getAddr(),
+                        this.serverList.get(i).getPort());
+
+                s.receive(packet);
+
+                receive = FTPService.stringFromDatagramPacket(packet);
+
+                System.out.println("< " + FTPService.stringFromDatagramPacket(packet));
+            } catch (IOException e) {
+                System.out.println(e.getStackTrace().toString());
+            }
+
+            if (FTPService.responseFromString(receive)  == FTPService.Response.PORT) {
+                rPortsTCP.add(FTPService.portFromResponse(receive));
+                this.serverList.get(i).setrPort(rPortsTCP.get(i));
+            } else {
+                deleteServer(i);
+                i--;
+            }
+        }
+
+        for (RemoteServer serv : this.serverList) {
+            executor.execute(serv);
+        }
+
+        for (i = 0;  i < this.serverList.size(); i++) {
+            try {
+                s.receive(packet);
+                System.out.println("< " + FTPService.stringFromDatagramPacket(packet)
+                        + " from " + packet.getAddress().getHostAddress()
+                        + ":" + packet.getPort());
+            } catch (IOException e) {
+                System.out.println(e.getStackTrace().toString());
+            }
+
+        }
+
+        for (i = 0;  i < this.serverList.size(); i++) {
+
+            if (!this.serverList.get(i).isUP()){
+                this.serverList.remove(i);
+                i--;
+            }
+        }
     }
 
     private String[] getInterval(int fileSize) {
