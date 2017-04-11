@@ -10,7 +10,7 @@ public class RemoteServer {
     private InetAddress addr;
     private int port;
 
-    public RemoteServer(int bw, InetAddress addr, int port) {
+    public RemoteServer(InetAddress addr, int port, int bw) {
         this.bw = bw;
         this.addr = addr;
         this.port = port;
