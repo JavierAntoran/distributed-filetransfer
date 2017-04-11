@@ -87,17 +87,17 @@ public class UDPFTPClient {
                 System.exit(1);
             }
 
+            this.s.close();
+
         } catch (Exception ax) {
             System.out.println("Exception caught while running ftp.client: \n"
                     + ax + "\nexiting");
             ax.printStackTrace();
             System.out.println(ax.getMessage());
             System.exit(2);
-        } finally {
-
-            System.out.println("Closing FTP session...");
-            this.s.close();
         }
+        System.out.println("Closing FTP session...");
+        System.exit(0);
     }
 
     private void parseServerInfo(File f) {
@@ -108,7 +108,6 @@ public class UDPFTPClient {
         String pattern = ".*\\s+(.*)\\s+(\\d+)\\s+(\\d+)$";
         String line;
         Matcher m;
-        int nServers = 0;
 
         if (!f.exists() || f.isDirectory()) {
             System.out.println("No se ha encontrado archivo de info de servidores");
@@ -130,17 +129,17 @@ public class UDPFTPClient {
                             Integer.parseInt(m.group(2)),
                             Integer.parseInt(m.group(3))));
                 } else {
-                    System.out.printf("Bad format line %d: %s\n", nServers + 1, line);
+                    System.out.printf("Bad format line %d: %s\n", serverList.size(), line);
                 }
             }
 
-            if (nServers == 0) {
+            if (serverList.size() == 0) {
                 System.out.println("No servers found, exiting");
                 System.exit(1);
             }
 
         } catch (UnknownHostException uhx) {
-            System.out.println("Error parsing server name: " + nServers);
+            System.out.println("Error parsing server name: " + serverList.size());
             System.out.println(uhx.getStackTrace().toString());
         } catch (IOException iox) {
             System.out.println("Error reading server data file");
@@ -252,7 +251,6 @@ public class UDPFTPClient {
 
         if ( fileSize != 0 ) { //nos aseguramos de que archivo existe
 
-            file = Files.createFile(Paths.get(reqFile)).toFile();
             String[] intervalStr = getInterval(fileSize); //obtenemos strings de partes
             String[] parts = getInterval(fileSize);
             int intval[];
@@ -446,8 +444,6 @@ public class UDPFTPClient {
                 System.out.println ("< " + FTPService.stringFromDatagramPacket(packet));
 
             } catch (SocketTimeoutException ste) {
-                System.out.println("Server " + rHost.getHostName() + ":" +
-                        " appears to be down or not responding");
                 System.out.println(ste.getStackTrace().toString()) ;
             } catch (IOException gx) {
                 System.out.println(gx.getStackTrace().toString()) ;
