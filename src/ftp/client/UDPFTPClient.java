@@ -272,8 +272,8 @@ public class UDPFTPClient {
                         System.out.println("< " + FTPService.stringFromDatagramPacket(packet));
 
                         if (FTPService.responseFromString(receive)  == FTPService.Response.PORT) {
-                            rPort.add(FTPService.portFromResponse(receive));
-                            System.out.println("< Get port " + rPort.get(i));
+                            rPortTCP.add(FTPService.portFromResponse(receive));
+                            System.out.println("< Get port " + rPortTCP.get(i));
                         }
 
                 }
@@ -281,8 +281,8 @@ public class UDPFTPClient {
                 for(i = 0;  i < this.serverList.size(); i++) {
                     intval = FTPService.getIntervalFromPart(reqFile + parts[i]);
                     executor.execute(new ClientFileHandler(0,
-                            this.serverList.get(i),
-                            rPort.get(i), i,
+                            this.serverList.get(i).getAddr(),
+                            rPortTCP.get(i), i,
                             Files.createFile(Paths.get(reqFile + parts[i])).toFile(),
                             intval[0], intval[1]));
                 }
@@ -432,22 +432,18 @@ public class UDPFTPClient {
 
     }
 
-    private void quitAction() {}
+    private void quitAction() {
+
+    }
 
     private void addServer(InetAddress rHost, int rPort, int BW) {
 
-        this.serverList.add(rHost);
-        this.serverPorts.add(rPort);
-        this.serverBW.add(BW);
-        this.nServers++;
+        this.serverList.add(new RemoteServer(rHost, rPort, BW));
     }
 
     private void deleteServer(int nServ) {
 
         this.serverList.remove(nServ);
-        this.serverPorts.remove(nServ);
-        this.serverBW.remove(nServ);
-        this.nServers--;
 
     }
 }
