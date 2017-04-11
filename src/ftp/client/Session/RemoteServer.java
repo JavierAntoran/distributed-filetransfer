@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 
+import static ftp.client.UDPFTPClient.executor;
+
 /**
  * Created by StFrancisco on 10/04/2017.
  */
@@ -48,9 +50,11 @@ public class RemoteServer extends ClientTCPHandler{
         return isUP;
     }
 
-    public void setrPort(int port) {
-        this.rPort = port;
+    public void getBandWidth(int rPortTCP) {
+        this.rPort = rPortTCP;
+        executor.execute(this);
     }
+
 
     @Override
     public void run() {
@@ -67,9 +71,9 @@ public class RemoteServer extends ClientTCPHandler{
                 establishTCP();
                 InputStream dataStream = stream.getInputStream();
                 long startTime = System.nanoTime();
-                System.out.println(startTime);
                 while ((dataLength = dataStream.read(buff)) != -1) {
                     dataRead += dataLength;
+                    System.out.println(dataRead);
                 }
 
                 if (dataRead != FTPService.BWCHECKSIZE * FTPService.CHUNKSIZE) {
@@ -80,6 +84,7 @@ public class RemoteServer extends ClientTCPHandler{
                     long endTime = System.nanoTime();
 
                     long timeLapsed = endTime - startTime;
+                    System.out.println(this.addr.getHostName()  + timeLapsed);
                     long bw = (dataRead * 1000000000 / timeLapsed);
                     this.bw = (int) bw;
                     System.out.println(this.addr.getHostName() +

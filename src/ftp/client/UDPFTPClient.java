@@ -421,30 +421,29 @@ public class UDPFTPClient {
 
                 System.out.println("< " + FTPService.stringFromDatagramPacket(packet));
             } catch (IOException e) {
-                System.out.println(e.getStackTrace().toString());
+                System.out.println(e.getMessage());
+                e.printStackTrace();
             }
 
             if (FTPService.responseFromString(receive)  == FTPService.Response.PORT) {
                 rPortsTCP.add(FTPService.portFromResponse(receive));
-                this.serverList.get(i).setrPort(rPortsTCP.get(i));
+                serverList.get(i).getBandWidth(rPortsTCP.get(i));
             } else {
                 deleteServer(i);
                 i--;
             }
         }
 
-        for (RemoteServer serv : this.serverList) {
-            executor.execute(serv);
-        }
-
         for (i = 0;  i < this.serverList.size(); i++) {
             try {
+                s.setSoTimeout(0);
                 s.receive(packet);
                 System.out.println("< " + FTPService.stringFromDatagramPacket(packet)
                         + " from " + packet.getAddress().getHostAddress()
                         + ":" + packet.getPort());
             } catch (IOException e) {
-                System.out.println(e.getStackTrace().toString());
+                System.out.println(e.getMessage());
+                e.printStackTrace();
             }
 
         }
