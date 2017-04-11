@@ -33,11 +33,6 @@ public class ClientFileHandler extends ClientTCPHandler{
         }
     }
 
-    private byte[] getChunk() {
-
-        return null;
-    }
-
     private void getFile() throws IOException {
 
         byte buff[] = new byte[10000000];
@@ -63,9 +58,8 @@ public class ClientFileHandler extends ClientTCPHandler{
         FileOutputStream fOut = new FileOutputStream(f);
         int dataLength;
 
-        for (i = this.firstChunk; i < this.lastChunk; i++) {
-            dataLength = dataStream.read(buff, 0, buff.length);
-            fOut.getChannel().position(FTPService.CHUNKSIZE * (i - 1));
+        //fOut.getChannel().position(FTPService.CHUNKSIZE * (this.firstChunk - 1));
+        while ((dataLength = dataStream.read(buff)) != -1) {
             fOut.write(buff, 0, dataLength);
         }
         fOut.flush();
@@ -88,7 +82,7 @@ public class ClientFileHandler extends ClientTCPHandler{
             if (!chunkMode) {
                 getFile();
             } else {
-                getChunk();
+                getChunks();
             }
 
             this.stream.close();

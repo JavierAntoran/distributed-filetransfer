@@ -250,7 +250,6 @@ public class UDPFTPClient {
 
         if ( fileSize != 0 ) {
 
-            file = Files.createFile(Paths.get(reqFile)).toFile();
             String[] parts = getInterval(fileSize);
             int intval[];
 
@@ -271,12 +270,17 @@ public class UDPFTPClient {
                         if (FTPService.responseFromString(receive)  == FTPService.Response.PORT) {
                             rPort.add(FTPService.portFromResponse(receive));
                             System.out.println("< Get port " + rPort.get(i));
-                            intval = FTPService.getIntervalFromPart(reqFile + parts[i]);
-                            executor.execute(new ClientFileHandler(0,
-                                    this.serverList.get(i),
-                                    rPort.get(i),i,file,intval[0],intval[1]));
                         }
 
+                }
+
+                for(i = 0;  i < this.serverList.size(); i++) {
+                    intval = FTPService.getIntervalFromPart(reqFile + parts[i]);
+                    executor.execute(new ClientFileHandler(0,
+                            this.serverList.get(i),
+                            rPort.get(i), i,
+                            Files.createFile(Paths.get(reqFile + parts[i])).toFile(),
+                            intval[0], intval[1]));
                 }
 
                 s.setSoTimeout(0);
@@ -292,6 +296,25 @@ public class UDPFTPClient {
                     }
 
                 }
+
+                file = Files.createFile(Paths.get(reqFile)).toFile();
+                FileOutputStream fOut = new FileOutputStream(file);
+                FileInputStream fIn;
+                byte[] data = new byte[FTPService.CHUNKSIZE];
+                int dataLength;
+                File part;
+                for (i = 0;  i < this.serverList.size(); i++) {
+                    part = Paths.get(reqFile + parts[i]).toFile();
+                    fIn = new FileInputStream(part);
+                    while ( (dataLength = fIn.read(data)) != -1) {
+                        fOut.write(data,0,dataLength);
+                    }
+                    fIn.close();
+                    part.delete();
+                }
+                fOut.close();
+
+
             } catch (IOException e) {
                 e.printStackTrace();
                 System.out.println(e.getMessage());
