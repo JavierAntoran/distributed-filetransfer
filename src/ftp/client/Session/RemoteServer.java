@@ -73,7 +73,7 @@ public class RemoteServer extends ClientTCPHandler{
                 long startTime = System.nanoTime();
                 while ((dataLength = dataStream.read(buff)) != -1) {
                     dataRead += dataLength;
-                    System.out.println(dataRead);
+                    //CHECSystem.out.println(dataRead);
                 }
 
                 if (dataRead != FTPService.BWCHECKSIZE * FTPService.CHUNKSIZE) {
@@ -84,11 +84,10 @@ public class RemoteServer extends ClientTCPHandler{
                     long endTime = System.nanoTime();
 
                     long timeLapsed = endTime - startTime;
-                    System.out.println(this.addr.getHostName()  + timeLapsed);
                     long bw = (dataRead * 1000000000 / timeLapsed);
                     this.bw = (int) bw;
                     System.out.println(this.addr.getHostName() +
-                            ": bandwidth updated to: " + bw);
+                            ": bandwidth updated to: " +  ((float) bw / 1000000));
                 }
 
                 dataStream.close();

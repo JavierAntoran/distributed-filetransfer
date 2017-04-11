@@ -176,7 +176,7 @@ public class UDPFTPClient {
         } catch (SocketTimeoutException ste) {
             System.out.println("Server " + rHost.getHostName() + ":" +
                     " appears to be down or not responding");
-            System.out.println(ste.getStackTrace().toString()) ;
+            //System.out.println(ste.getStackTrace().toString()) ;
         } catch (IOException gx) {
             System.out.println(gx.getStackTrace().toString()) ;
             return false;

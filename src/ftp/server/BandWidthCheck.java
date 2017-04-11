@@ -27,9 +27,10 @@ public class BandWidthCheck extends HandleFTPConnection {
             int nTimes = FTPService.BWCHECKSIZE; //Mb
             int timeLapsed = 0;
 
+            byte buf[] = new byte[FTPService.CHUNKSIZE];
+            Arrays.fill(buf, (byte) 8);
+
             for(i = 0; i < nTimes; i++) {
-                byte buf[] = new byte[FTPService.CHUNKSIZE];
-                Arrays.fill(buf, (byte) 8);
                 this.out.write(buf, 0, FTPService.CHUNKSIZE);
             }
             this.out.close();
