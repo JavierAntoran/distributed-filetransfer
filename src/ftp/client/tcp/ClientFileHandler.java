@@ -1,4 +1,4 @@
-package ftp.client;
+package ftp.client.tcp;
 
 import ftp.FTPService;
 

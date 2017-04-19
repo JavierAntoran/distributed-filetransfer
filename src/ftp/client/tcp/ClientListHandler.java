@@ -1,5 +1,6 @@
-package ftp.client;
+package ftp.client.tcp;
 
+import ftp.client.ClientMonitor;
 import ftp.client.Session.RemoteFile;
 
 import java.io.BufferedReader;

@@ -3,6 +3,8 @@ package ftp.client;
 import ftp.FTPService;
 import ftp.client.Session.RemoteFile;
 import ftp.client.Session.RemoteServer;
+import ftp.client.tcp.ClientFileHandler;
+import ftp.client.tcp.ClientListHandler;
 
 import java.io.*;
 import java.net.*;
@@ -240,7 +242,6 @@ public class UDPFTPClient {
         String response;
 
         ArrayList<Thread> cfhList = new ArrayList<Thread>();
-        ArrayList<Integer> rPortTCP = new ArrayList<Integer>();
 
         int fileSize = 0;
         String reqFilename;
@@ -371,11 +372,7 @@ public class UDPFTPClient {
 
         String response;
 
-        ArrayList<Integer> rPorts = new ArrayList<Integer>();
         ArrayList<String> partsExts = new ArrayList<String>();
-
-        ArrayList<RemoteServer> rsOK = new ArrayList<RemoteServer>();
-        ArrayList<RemoteServer> rsERR = new ArrayList<RemoteServer>();
 
         ArrayList<Thread> clhList = new ArrayList<Thread>();
 
@@ -460,57 +457,69 @@ public class UDPFTPClient {
 
     private void checkBWAction(){
 
-        int i;
-        String receive = "";
-        ArrayList<Integer> rPortsTCP = new ArrayList<Integer>();
+        String response;
+        ArrayList<Thread> rsTList = new ArrayList<Thread>();
 
-        for (i = 0; i < this.serverList.size(); i++) {
+        for (RemoteServer server : this.serverList) {
             try {
-                FTPService.sendUDPmessage(s,
+                FTPService.sendUDPmessage(this.s,
                         FTPService.Command.CHECKBW.toString(),
-                        this.serverList.get(i).getAddr(),
-                        this.serverList.get(i).getPort());
+                        server.getAddr(),
+                        server.getPort());
 
-                s.receive(packet);
+                this.s.receive(packet);
 
-                receive = FTPService.stringFromDatagramPacket(packet);
+                response = FTPService.stringFromDatagramPacket(packet);
 
-                System.out.println("< " + FTPService.stringFromDatagramPacket(packet));
+                FTPService.logInfo(String.format("< [%s] %s ", server, response));
+
+                if (FTPService.responseFromString(response) == FTPService.Response.PORT) {
+                    server.setRemotePort(FTPService.portFromResponse(response));
+                    Thread rsT = new Thread(server);
+                    rsT.start();
+                    rsTList.add(rsT);
+                } else {
+                    this.serverList.remove(server);
+                }
+
             } catch (IOException e) {
-                System.out.println(e.getMessage());
-                e.printStackTrace();
-            }
-
-            if (FTPService.responseFromString(receive)  == FTPService.Response.PORT) {
-                rPortsTCP.add(FTPService.portFromResponse(receive));
-                serverList.get(i).getBandWidth(rPortsTCP.get(i));
-            } else {
-                deleteServer(i);
-                i--;
+                FTPService.logErr(e.getMessage());
+                FTPService.logDebug(e);
             }
         }
 
-        for (i = 0;  i < this.serverList.size(); i++) {
+        for (Thread rsT : rsTList) {
             try {
-                s.setSoTimeout(0);
+                rsT.join();
+            }catch (InterruptedException e) {
+                FTPService.logErr(e.getMessage());
+                FTPService.logDebug(e);
+            }
+        }
+
+        for (RemoteServer server : this.serverList) {
+            try {
                 s.receive(packet);
-                System.out.println("< " + FTPService.stringFromDatagramPacket(packet)
-                        + " from " + packet.getAddress().getHostAddress()
-                        + ":" + packet.getPort());
+
+                response = FTPService.stringFromDatagramPacket(packet);
+
+                FTPService.logInfo(String.format("< [%s] %s ", server, response));
+
+                if (FTPService.responseFromString(response) != FTPService.Response.OK) {
+                    FTPService.logWarn(String.format("Unexpected LIST response from %s", server.getName()));
+                }
             } catch (IOException e) {
-                System.out.println(e.getMessage());
-                e.printStackTrace();
-            }
-
-        }
-
-        for (i = 0;  i < this.serverList.size(); i++) {
-
-            if (!this.serverList.get(i).isUP()){
-                this.serverList.remove(i);
-                i--;
+                FTPService.logErr(e.getMessage());
+                FTPService.logDebug(e);
             }
         }
+
+        for (RemoteServer server : this.serverList) {
+            if (!server.isUP()){
+                this.serverList.remove(server);
+            }
+        }
+
     }
 
     private String[] getInterval(int fileSize) {

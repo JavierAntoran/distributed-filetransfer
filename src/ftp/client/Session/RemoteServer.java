@@ -1,43 +1,44 @@
 package ftp.client.Session;
 
+import ftp.FTPService;
+import ftp.client.tcp.ClientTCPHandler;
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 
 /**
  * Created by StFrancisco on 10/04/2017.
  */
 public class RemoteServer extends ClientTCPHandler{
+
+    private String name;
     private int bw;
     private InetAddress addr;
     private int port;
 
     private int dataPort;
 
-    public RemoteServer(String name, InetAddress addr, int port, int bw) {
-        this.name = name;
     private boolean isUP = true; //used to mark for deletion if down
 
-    public RemoteServer(InetAddress addr, int port, int bw) {
-
-        super(0, addr, port);
-
+    public RemoteServer(String name, InetAddress addr, int port, int bw) {
+        super(0,addr,0);
+        this.name = name;
         this.bw = bw;
         this.addr = addr;
         this.port = port;
     }
 
     public RemoteServer(InetAddress addr, int port, int bw) {
-        this(addr.getHostName(), addr, port, bw);
+        super(0,addr,0);
         this.name = addr.getHostName() + ":" + port;
+        this.bw = bw;
+        this.addr = addr;
+        this.port = port;
     }
 
     public String getName() {
         return name;
-    }
-
-    public int getBw() {
-        return bw;
-    public RemoteServer(int lPort, InetAddress rHost, int rPort) {
-        super(lPort, rHost, rPort);
     }
 
     public InetAddress getAddr() {
@@ -60,17 +61,11 @@ public class RemoteServer extends ClientTCPHandler{
         return isUP;
     }
 
-    public void getBandWidth(int rPortTCP) {
-        this.rPort = rPortTCP;
-        executor.execute(this);
-    }
-
-
     @Override
     public void run() {
 
-        if (rPort == port) {
-            System.out.println("error: set rPort for tcp");
+        if (this.rPort == this.port) {
+            FTPService.logErr("DATA port and CONTROL port are equal");
         } else {
             try {
 

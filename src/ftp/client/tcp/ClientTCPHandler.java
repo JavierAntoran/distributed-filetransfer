@@ -1,4 +1,4 @@
-package ftp.client;
+package ftp.client.tcp;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -21,6 +21,18 @@ abstract public class ClientTCPHandler implements Runnable{
         this.rPort = rPort;
         this.lPort = lPort;
 
+    }
+
+    public void setRemoteHost(InetAddress rHost) {
+        this.rHost = rHost;
+    }
+
+    public void setRemotePort(int remotePort) {
+        this.rPort = remotePort;
+    }
+
+    public void setListenPort(int listenPort) {
+        this.lPort = listenPort;
     }
 
     protected void establishTCP() {

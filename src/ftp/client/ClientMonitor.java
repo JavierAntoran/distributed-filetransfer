@@ -8,7 +8,7 @@ import java.util.HashMap;
 /**
  * Alberto Mur & Javier Antoran
  */
-abstract class ClientMonitor {
+abstract public class ClientMonitor {
 
     private static HashMap<String, RemoteFile> mergedList = new HashMap<String, RemoteFile>();
 
@@ -20,7 +20,7 @@ abstract class ClientMonitor {
         ClientMonitor.mergedList = new HashMap<String, RemoteFile>();
     }
 
-    protected static synchronized void writeList(ArrayList<RemoteFile> list) {
+    public static synchronized void writeList(ArrayList<RemoteFile> list) {
         int i, n;
 
         for(RemoteFile rFile: list) {
