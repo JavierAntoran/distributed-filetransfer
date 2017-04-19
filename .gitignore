@@ -19,6 +19,7 @@
 # Gradle:
 .idea/**/gradle.xml
 .idea/**/libraries
+.idea/kotlinc.xml
 
 # Mongo Explorer plugin:
 .idea/**/mongoSettings.xml
