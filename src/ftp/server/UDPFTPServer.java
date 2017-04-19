@@ -18,7 +18,7 @@ public class UDPFTPServer {
 
     static final String FTP_ROOT = "ftp_files/";
 
-    private ExecutorService executor; //executor!!!!! MUAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAH
+    private ExecutorService executor;
 
     private DatagramSocket s;
     private DatagramPacket p;
