@@ -1,9 +1,9 @@
 package ftp;
 
-import java.io.File;
-
 import java.io.IOException;
 import java.net.*;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -13,6 +13,11 @@ import java.util.regex.Matcher;
 
 
 public class FTPService {
+
+    public static final int LOG_DEBUG = 8;
+    public static final int LOG_ERR = 4;
+    public static final int LOG_WARN = 2;
+    public static final int LOG_INFO = 1;
 
     public static final int SIZEMAX = 255; // Maximum size of UDP datagram
     public static final int SERVERPORT = 5000; // default ftp.server port
@@ -141,6 +146,29 @@ public class FTPService {
                                               : (fileSize / chunkSize + 1);
 
         return chunks;
+    }
+
+    public static void logDebug(String msg) {
+        FTPService.debug(FTPService.LOG_DEBUG, msg);
+    }
+
+    public static void logDebug(Exception e) {
+        e.printStackTrace();
+    }
+
+    public static void logWarn(String msg) {
+        FTPService.debug(FTPService.LOG_WARN, msg);
+    }
+    public static void logErr(String msg) {
+        FTPService.debug(FTPService.LOG_ERR, msg);
+    }
+    public static void logInfo(String msg) {
+        FTPService.debug(FTPService.LOG_INFO, msg);
+    }
+
+    private static void debug(int logLevel, String msg) {
+        String date = ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        System.out.printf("[DEBUG] %s: %s\n", date, msg);
     }
 
 }
