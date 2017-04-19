@@ -13,12 +13,22 @@ public class RemoteFile {
     private long fileSize;
     private long nChunks;
 
+    public RemoteFile(){}
+
     public RemoteFile(String fileName, long fileSize) {
 
         this.fileName = fileName;
         this.fileSize = fileSize;
         this.nChunks = FTPService.getNChunks(this.fileSize, FTPService.CHUNKSIZE);
 
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public void setFileSize(long fileSize) {
+        this.fileSize = fileSize;
     }
 
     public String getFileName() {
@@ -61,6 +71,6 @@ public class RemoteFile {
         }
 
         return interval;
-
     }
+
 }
