@@ -1,37 +1,31 @@
 package ftp.client;
 
+import ftp.client.Session.RemoteFile;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Alberto Mur & Javier Antoran
  */
 abstract class ClientMonitor {
 
-    private static ArrayList<String> mergedList = new ArrayList<String>();
+    private static HashMap<String, RemoteFile> mergedList = new HashMap<String, RemoteFile>();
 
-    public static ArrayList<String> getMergedList() {
+    public static synchronized HashMap<String, RemoteFile> getMergedList() {
         return mergedList;
     }
 
-    public static void resetList(){
-        mergedList = new ArrayList<String>();
+    public static synchronized void resetList(){
+        ClientMonitor.mergedList = new HashMap<String, RemoteFile>();
     }
 
-    protected static synchronized void writeList(ArrayList<String> list) {
+    protected static synchronized void writeList(ArrayList<RemoteFile> list) {
         int i, n;
-        boolean exists;
 
-
-
-        for (i = 0; i < list.size(); i++) {
-            exists = false;
-            for(n = 0; n < mergedList.size(); n++) {
-                if (mergedList.get(n).equals(list.get(i))) {
-                    exists = true;
-                }
-            }
-            if (!exists) {
-                mergedList.add(list.get(i));
+        for(RemoteFile rFile: list) {
+            if (!mergedList.containsKey(rFile.getFileName())) {
+                mergedList.put(rFile.getFileName(), rFile);
             }
         }
 

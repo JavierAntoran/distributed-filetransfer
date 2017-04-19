@@ -1,14 +1,6 @@
 package ftp.client.Session;
 
-import ftp.FTPService;
-import ftp.client.ClientTCPHandler;
-import ftp.client.UDPFTPClient;
-
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetAddress;
-
-import static ftp.client.UDPFTPClient.executor;
 
 /**
  * Created by StFrancisco on 10/04/2017.
@@ -18,6 +10,10 @@ public class RemoteServer extends ClientTCPHandler{
     private InetAddress addr;
     private int port;
 
+    private int dataPort;
+
+    public RemoteServer(String name, InetAddress addr, int port, int bw) {
+        this.name = name;
     private boolean isUP = true; //used to mark for deletion if down
 
     public RemoteServer(InetAddress addr, int port, int bw) {
@@ -27,9 +23,19 @@ public class RemoteServer extends ClientTCPHandler{
         this.bw = bw;
         this.addr = addr;
         this.port = port;
-
     }
 
+    public RemoteServer(InetAddress addr, int port, int bw) {
+        this(addr.getHostName(), addr, port, bw);
+        this.name = addr.getHostName() + ":" + port;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getBw() {
+        return bw;
     public RemoteServer(int lPort, InetAddress rHost, int rPort) {
         super(lPort, rHost, rPort);
     }
@@ -40,6 +46,10 @@ public class RemoteServer extends ClientTCPHandler{
 
     public int getPort() {
         return port;
+    }
+
+    public String toString(){
+        return this.name;
     }
 
     public int getBw() {
