@@ -1,15 +1,14 @@
 package ftp.client;
 
 import ftp.FTPService;
+import ftp.client.Session.RemoteFile;
 import ftp.client.Session.RemoteServer;
 
 import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
@@ -35,6 +34,7 @@ public class UDPFTPClient {
     // data read from serverfile
     private File serverFile;
     ArrayList<RemoteServer> serverList;
+    HashMap<String, RemoteFile> fileList;
 
     public static void main(String[] args) {
 
@@ -100,11 +100,15 @@ public class UDPFTPClient {
         System.exit(0);
     }
 
+    /**
+     * Reads server file and extracts hostname/ip, port and expected bandwith
+     *
+     * @param File f Server file list
+     */
     private void parseServerInfo(File f) {
-        /**
-         * Reads server file and extracts hostname/ip, port and expected bandwith
-         */
+
         // TODO: make sure error messages and exceptions are coherent
+        // TODO: Allow tab as a separator
         String pattern = ".*\\s+(.*)\\s+(\\d+)\\s+(\\d+)$";
         String line;
         Matcher m;
@@ -153,46 +157,53 @@ public class UDPFTPClient {
      * returns true if server is up, false if remote host times out
      * or another @IOException occurs
      *
-     * @param rHost
-     * @param rPort
-     * @return
+     * @param RemoteServer rs
+     * @return boolean
      */
-    private boolean sendHello(InetAddress rHost, int rPort) {
+    private boolean sendHello(RemoteServer rs) {
 
-        String receive;
+        String response;
         try {
-            FTPService.sendUDPmessage(s, FTPService.Command.HELLO.toString(), rHost, rPort);
-            s.receive(packet);
 
-            receive = FTPService.stringFromDatagramPacket(packet);
+            FTPService.sendUDPmessage(s, FTPService.Command.HELLO.toString(),
+                    rs.getAddr(), rs.getPort());
 
-            System.out.println ("< " + FTPService.stringFromDatagramPacket(packet));
+            this.s.receive(packet);
+
+            response = FTPService.stringFromDatagramPacket(packet);
 
 
-            if (FTPService.responseFromString(receive)  != FTPService.Response.WCOME) {
+            FTPService.logInfo(String.format("< [%s] %s ", rs, response));
+
+
+            if (FTPService.responseFromString(response) != FTPService.Response.WCOME) {
+                FTPService.logWarn(String.format("Unexpected HELLO response from %s", rs.getName()));
                 return false;
             }
 
-        } catch (SocketTimeoutException ste) {
-            System.out.println("Server " + rHost.getHostName() + ":" +
-                    " appears to be down or not responding");
-            System.out.println(ste.getStackTrace().toString()) ;
-        } catch (IOException gx) {
-            System.out.println(gx.getStackTrace().toString()) ;
+        } catch (SocketTimeoutException e) {
+            FTPService.logWarn(String.format("Server %s appears to be down or not responding",  rs.getName()));
+            FTPService.logErr(e.getMessage());
+            FTPService.logDebug(e);
+            return false;
+        } catch (IOException e) {
+            FTPService.logErr(e.getMessage());
+            FTPService.logDebug(e);
             return false;
         }
         return true;
     }
 
     /**
+     *  Executes the specified command action
      *
-     * @param command
+     * @param String command
      */
     private void sendCommand(String command) {
 
-        FTPService.Command cRX = FTPService.commandFromString(command);
+        FTPService.Command c = FTPService.commandFromString(command);
         try {
-            switch (cRX) {
+            switch (c) {
                 case HELLO:
                     this.helloAction();
                     break;
@@ -210,12 +221,12 @@ public class UDPFTPClient {
                     break;
 
                 default:
-                    System.out.println("Unknown command");
+                    System.out.println("Unknown command, try: " + FTPService.Command.values().toString());
                     break;
             }
         } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println(e.getMessage());
+            FTPService.logErr(e.getMessage());
+            FTPService.logDebug(e);
         }
 
     }
@@ -225,41 +236,31 @@ public class UDPFTPClient {
         int i;
         String receive = "";
         ArrayList<Integer> rPortTCP = new ArrayList<Integer>();
-        Pattern p;
+
         Matcher m;
         int fileSize = 0;
-        String reqFile;
+        String reqFilename;
         File file;
 
-        ArrayList<String> list = ClientMonitor.getMergedList();
+        HashMap<String, RemoteFile> fileList = ClientMonitor.getMergedList();
         //sacamos info de archivos de LIST que ya se habra hecho
 
-        reqFile = FTPService.requestedFile(command);
+        reqFilename = FTPService.requestedFile(command);
         //sacamos archivo que queremos
 
-        p = Pattern.compile("(.*)\\t(\\d+)$");
-        //buscamos en el list
+        if ( fileList.containsKey(reqFilename) ) { //nos aseguramos de que archivo existe
 
+            RemoteFile reqFile = fileList.get(reqFilename);
 
-        for(i = 0; i < list.size() && fileSize == 0; i++) {
-            m = p.matcher(list.get(i));
-            if (m.find() && m.group(1).equals(reqFile)) {
-                fileSize = Integer.parseInt(m.group(2));
-                //buscamos archivo en la lista que tiene el nombre del pedido
-            }
-        }
-
-        if ( fileSize != 0 ) { //nos aseguramos de que archivo existe
-
-            String[] intervalStr = getInterval(fileSize); //obtenemos strings de partes
-            String[] parts = getInterval(fileSize);
+            ArrayList<String> intervalStr = getInterval(reqFile.getFileSize()); //obtenemos strings de partes
+            ArrayList<String> parts = getInterval(fileSize);
             int intval[];
 
             try {
                 for (i = 0; i < this.serverList.size(); i++) {
 
                         FTPService.sendUDPmessage(s,
-                                FTPService.Command.GET.toString() + " " + reqFile + intervalStr[i],
+                                FTPService.Command.GET.toString() + " " + reqFile + intervalStr.get(i),
                                 this.serverList.get(i).getAddr(),
                                 this.serverList.get(i).getPort()); //enviamos peticion
 
@@ -277,11 +278,11 @@ public class UDPFTPClient {
                 }
 
                 for(i = 0;  i < this.serverList.size(); i++) {
-                    intval = FTPService.getIntervalFromPart(reqFile + parts[i]);
+                    intval = FTPService.getIntervalFromPart(reqFile + parts.get(i));
                     executor.execute(new ClientFileHandler(0,
                             this.serverList.get(i).getAddr(),
                             rPortTCP.get(i), i,
-                            Files.createFile(Paths.get(reqFile + parts[i])).toFile(),
+                            Files.createFile(Paths.get(reqFile + parts.get(i))).toFile(),
                             intval[0], intval[1]));
                 }
 
@@ -299,14 +300,14 @@ public class UDPFTPClient {
 
                 }
 
-                file = Files.createFile(Paths.get(reqFile)).toFile();
+                file = Files.createFile(Paths.get(reqFile.getFileName())).toFile();
                 FileOutputStream fOut = new FileOutputStream(file);
                 FileInputStream fIn;
                 byte[] data = new byte[FTPService.CHUNKSIZE];
                 int dataLength;
                 File part;
                 for (i = 0;  i < this.serverList.size(); i++) {
-                    part = Paths.get(reqFile + parts[i]).toFile();
+                    part = Paths.get(reqFile + parts.get(i)).toFile();
                     fIn = new FileInputStream(part);
                     while ( (dataLength = fIn.read(data)) != -1) {
                         fOut.write(data,0,dataLength);
@@ -326,139 +327,177 @@ public class UDPFTPClient {
     }
 
     private void helloAction() {
-        int i;
 
         parseServerInfo(this.serverFile);
 
-        for (i = 0; i < this.serverList.size(); i++) {
-            if (!sendHello(this.serverList.get(i).getAddr(), this.serverList.get(i).getPort())) {
-                this.deleteServer(i);
-                i--;
+        for (RemoteServer server: this.serverList) {
+            if (!sendHello(server) ) {
+                this.serverList.remove(server);
             }
         }
+
     }
 
     private void listAction() {
-        int i;
-        String receive = "";
-        ArrayList<Integer> rPortsTCP = new ArrayList<Integer>();
 
-        for (i = 0; i < this.serverList.size(); i++) {
-            try {
-                FTPService.sendUDPmessage(s,
-                        FTPService.Command.LIST.toString(),
-                        this.serverList.get(i).getAddr(),
-                        this.serverList.get(i).getPort());
+        String response;
 
-                s.receive(packet);
+        ArrayList<Integer> rPorts = new ArrayList<Integer>();
+        ArrayList<String> partsExts = new ArrayList<String>();
 
-                receive = FTPService.stringFromDatagramPacket(packet);
+        ArrayList<RemoteServer> rsOK = new ArrayList<RemoteServer>();
+        ArrayList<RemoteServer> rsERR = new ArrayList<RemoteServer>();
 
-                System.out.println("< " + FTPService.stringFromDatagramPacket(packet));
-            } catch (IOException e) {
-                System.out.println(e.getStackTrace().toString());
-            }
-
-            if (FTPService.responseFromString(receive)  == FTPService.Response.PORT) {
-                rPortsTCP.add(FTPService.portFromResponse(receive));
-                System.out.println("< Get port " + rPortsTCP.get(i));
-            } else {
-                deleteServer(i);
-                i--;
-            }
-        }
-
-        for (i = 0;  i < this.serverList.size(); i++) {
-            executor.execute(new ClientListHandler(0,
-                    this.serverList.get(i).getAddr(),
-                    rPortsTCP.get(i),i));
-        }
-
-        for (i = 0;  i < this.serverList.size(); i++) {
-            try {
-                s.receive(packet);
-                System.out.println("< " + FTPService.stringFromDatagramPacket(packet)
-                        + " from " + packet.getAddress().getHostAddress()
-                        + ":" + packet.getPort());
-            } catch (IOException e) {
-                System.out.println(e.getStackTrace().toString());
-            }
-
-        }
+        ArrayList<Thread> clhList = new ArrayList<Thread>();
 
         try {
-            ArrayList<String> list = ClientMonitor.getMergedList();
-            for (String entry : list) {
-                System.out.println(entry);
+            ClientMonitor.resetList();
+
+            for (RemoteServer server : this.serverList) {
+                try {
+                    FTPService.sendUDPmessage(this.s,
+                            FTPService.Command.LIST.toString(),
+                            server.getAddr(),
+                            server.getPort());
+
+                    this.s.receive(packet);
+
+                    response = FTPService.stringFromDatagramPacket(packet);
+
+                    FTPService.logInfo(String.format("< [%s] %s ", server, response));
+
+                    if (FTPService.responseFromString(response) == FTPService.Response.PORT) {
+                        Thread clhT = new Thread(new ClientListHandler(0,
+                                server.getAddr(),
+                                FTPService.portFromResponse(response),
+                                server.hashCode()));
+                        clhT.start();
+                        clhList.add(clhT);
+
+                    } else {
+                        this.serverList.remove(server);
+                    }
+
+                } catch (IOException e) {
+                    FTPService.logErr(e.getMessage());
+                    FTPService.logDebug(e);
+                }
+            }
+
+            for (Thread clh : clhList) {
+                try {
+                    clh.join();
+                }catch (InterruptedException e) {
+                    FTPService.logErr(e.getMessage());
+                    FTPService.logDebug(e);
+                }
+            }
+
+            for (RemoteServer server : this.serverList) {
+                try {
+                    s.receive(packet);
+
+                    response = FTPService.stringFromDatagramPacket(packet);
+
+                    FTPService.logInfo(String.format("< [%s] %s ", server, response));
+
+                    if (FTPService.responseFromString(response) != FTPService.Response.OK) {
+                        FTPService.logWarn(String.format("Unexpected LIST response from %s", server.getName()));
+                    }
+                } catch (IOException e) {
+                    FTPService.logErr(e.getMessage());
+                    FTPService.logDebug(e);
+                }
+            }
+
+            this.fileList = ClientMonitor.getMergedList();
+
+            if (this.fileList.size() > 0) {
+                System.out.println("Size    \tFilename");
+                System.out.println("--------------------");
+                for (Map.Entry<String, RemoteFile> entry : fileList.entrySet()) {
+                    RemoteFile rFile = entry.getValue();
+                    System.out.println(String.format("%1$8s\t%2$s", rFile.getFileSize(), rFile.getFileName()));
+                }
+            } else {
+                System.out.println("Directory empty");
             }
         } catch (ConcurrentModificationException e) {
-            e.printStackTrace();
-            System.out.println(e.getMessage());
+            FTPService.logErr(e.getMessage());
+            FTPService.logDebug(e);
         }
 
     }
 
-    private String[] getInterval(int fileSize) {
+    /**
+     * Returns the part extension for each remote server based on
+     * available bandwidth
+     * @param int fileSize
+     * @return String[]
+     */
+    private ArrayList<String> getInterval(long fileSize) {
 
-        int i;
-        String interval[] = new String[serverList.size()];
+        ArrayList<String> partsExts = new ArrayList<String>();
         int totalBW = 0;
         int relativeBW = 0;
         int chunkOffset = 0;
         long nChunks = FTPService.getNChunks(fileSize, FTPService.CHUNKSIZE);
 
-        for (i = 0; i < serverList.size(); i++) {
-            totalBW += serverList.get(i).getBw();
+        for(RemoteServer server: this.serverList) {
+            totalBW += server.getBw();
         }
 
-        for (i = 0; i < serverList.size(); i++) {
-            relativeBW = Math.round(nChunks * serverList.get(i).getBw() / totalBW);
-            interval[i] = ".part" + (chunkOffset + 1) + "-" + (relativeBW + chunkOffset);
+        for(RemoteServer server: this.serverList) {
+            relativeBW = Math.round(nChunks * server.getBw() / totalBW);
+
+            partsExts.set(this.serverList.indexOf(server),
+                    ".part" + (chunkOffset + 1) + "-" + (relativeBW + chunkOffset));
             chunkOffset += relativeBW;
         }
 
         if (chunkOffset - nChunks > 0) {
-            interval[serverList.size() - 1] = ".part" + (chunkOffset - relativeBW + 1)
-                    + "-" + (chunkOffset - 1);
-        } else if (chunkOffset - nChunks > 0) {
-            interval[serverList.size() - 1] = ".part" + (chunkOffset - relativeBW + 1)
-                    + "-" + (chunkOffset + 1);
+            partsExts.set(this.serverList.size() - 1,
+                    ".part" + (chunkOffset - relativeBW + 1) + "-" + (chunkOffset - 1) );
+        } else if (chunkOffset - nChunks < 0) {
+            partsExts.set(this.serverList.size() - 1,
+                    ".part" + (chunkOffset - relativeBW + 1) + "-" + (chunkOffset + 1) );
         }
 
-        return interval;
-
-
+        return partsExts;
     }
 
+    /**
+     * Executes QUIT call to remote servers
+     */
     private void quitAction() {
-        int i;
+        String response;
 
-        for (i = 0; i < this.serverList.size(); i++) {
-            String receive;
+        for (RemoteServer server: this.serverList) {
             try {
-                FTPService.sendUDPmessage(s, FTPService.Command.QUIT.toString(), this.serverList.get(i).getAddr(), this.serverList.get(i).getPort());
+                FTPService.sendUDPmessage(
+                        s,
+                        FTPService.Command.QUIT.toString(),
+                        server.getAddr(),
+                        server.getPort());
+
                 s.receive(packet);
 
-                receive = FTPService.stringFromDatagramPacket(packet);
+                response = FTPService.stringFromDatagramPacket(packet);
 
-                System.out.println ("< " + FTPService.stringFromDatagramPacket(packet));
+                FTPService.logInfo(String.format("< %", FTPService.stringFromDatagramPacket(packet)));
 
-            } catch (SocketTimeoutException ste) {
-                System.out.println(ste.getStackTrace().toString()) ;
-            } catch (IOException gx) {
-                System.out.println(gx.getStackTrace().toString()) ;
+                if (FTPService.responseFromString(response) != FTPService.Response.WCOME) {
+                    FTPService.logWarn(String.format("Unexpected QUIT response from %s", server.getName()));
+                }
+
+            } catch (SocketTimeoutException e) {
+                FTPService.logErr(e.getMessage());
+                FTPService.logDebug(e);
+            } catch (IOException e) {
+                FTPService.logErr(e.getMessage());
+                FTPService.logDebug(e);
             }
         }
     }
 
-    private void addServer(InetAddress rHost, int rPort, int BW) {
-
-        this.serverList.add(new RemoteServer(rHost, rPort, BW));
-    }
-
-    private void deleteServer(int nServ) {
-
-        this.serverList.remove(nServ);
-
-    }
 }
