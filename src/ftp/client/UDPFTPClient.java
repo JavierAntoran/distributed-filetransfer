@@ -72,7 +72,7 @@ public class UDPFTPClient {
             this.s.setSoTimeout(FTPService.TIMEOUT);
             this.packet = new DatagramPacket(new byte[FTPService.SIZEMAX], FTPService.SIZEMAX);
 
-            helloAction();
+            helloAction(); //parse file and send Hello
 
             if (this.serverList.size() != 0) {
 
@@ -110,7 +110,8 @@ public class UDPFTPClient {
     private void parseServerInfo(File f) {
 
         // TODO: make sure error messages and exceptions are coherent
-        // TODO: Allow tab as a separator
+        // TODO: if server objects already created dont override bandwidth
+
         String pattern = ".*\\s+(.*)\\s+(\\d+)\\s+(\\d+)$";
         String line;
         Matcher m;
@@ -163,7 +164,6 @@ public class UDPFTPClient {
      * @return boolean
      */
     private boolean sendHello(RemoteServer rs) {
-
         String response;
         try {
 
