@@ -165,6 +165,7 @@ public class UDPFTPClient {
      */
     private boolean sendHello(RemoteServer rs) {
         String response;
+        boolean isUp = true;
         try {
 
             FTPService.sendUDPmessage(s, FTPService.Command.HELLO.toString(),
@@ -185,6 +186,7 @@ public class UDPFTPClient {
 
         } catch (SocketTimeoutException e) {
             FTPService.logWarn(String.format("Server %s appears to be down or not responding",  rs.getName()));
+            isUp = false;
             FTPService.logErr(e.getMessage());
             FTPService.logDebug(e);
             return false;
@@ -193,7 +195,7 @@ public class UDPFTPClient {
             FTPService.logDebug(e);
             return false;
         }
-        return true;
+        return isUp;
     }
 
     /**

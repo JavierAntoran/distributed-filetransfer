@@ -49,6 +49,7 @@ public class RemoteFile {
      * ArrayList<RemoteServer> servers
      * ArrayList<String>
      */
+    //TODO: switch to better algorithm
     public ArrayList<String> getPartsExtension(ArrayList<RemoteServer> servers) {
 
         ArrayList<String> partsExtension = new ArrayList<String>();
