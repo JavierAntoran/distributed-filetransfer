@@ -63,49 +63,4 @@ public class RemoteServer{
         return isUP;
     }
 
-    @Override
-    public void run() {
-
-        if (this.rPort == this.port) {
-            FTPService.logErr("DATA port and CONTROL port are the same");
-        } else {
-            try {
-
-                int dataLength;
-                long dataRead = 0;
-                byte buff[] = new byte[FTPService.CHUNKSIZE];
-
-                establishTCP();
-                InputStream dataStream = stream.getInputStream();
-                long startTime = System.nanoTime();
-                while ((dataLength = dataStream.read(buff)) != -1) {
-                    dataRead += dataLength;
-                    //CHECSystem.out.println(dataRead);
-                }
-
-                if (dataRead != FTPService.BWCHECKSIZE * FTPService.CHUNKSIZE) {
-                    System.out.println("error in number of bytes read");
-                    //TODO: do something
-
-                } else {
-                    long endTime = System.nanoTime();
-
-                    long timeLapsed = endTime - startTime;
-                    long bw = (dataRead * 1000000000 / timeLapsed);
-                    this.bw = (int) bw;
-                    System.out.println(this.addr.getHostName() +
-                            ": bandwidth updated to: " +  ((float) bw / 1000000));
-                }
-
-                dataStream.close();
-                stream.close();
-
-            } catch (IOException serverDown) {
-                System.out.println(serverDown);
-                this.isUP = false;
-
-            }
-        }
-    }
-
 }

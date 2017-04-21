@@ -34,30 +34,6 @@ public class ClientFileHandler extends ClientTCPHandler{
 
     }
 
-    /*private long getFile() throws IOException {
-
-        byte buff[] = new byte[10000000];
-        InputStream fileStream = stream.getInputStream();
-        FileOutputStream fOut = new FileOutputStream(f);
-
-        int dataLength;
-        long totalData = 0;
-        long startTime = System.nanoTime();
-        while ((dataLength = fileStream.read(buff, 0, buff.length)) != -1) {
-            fOut.write(buff, 0, dataLength);
-            totalData += dataLength;
-        }
-        long endTime = System.nanoTime();
-        long timeLapsed = endTime - startTime;
-        long bw = (totalData * 1000000000 / timeLapsed);
-
-        fOut.flush();
-
-        fOut.close();
-        fileStream.close();
-        return bw;
-    }
-    */
 
     private long bwCheck() throws IOException {
 
@@ -127,8 +103,9 @@ public class ClientFileHandler extends ClientTCPHandler{
             }
             this.fileStream.close();
 
-        } catch (IOException be3nix){
-            System.out.println(benix.getMessage());
+        } catch (IOException  e) {
+            FTPService.logErr(e.getMessage());
+            FTPService.logDebug(e);
             //TODO: implement resending request if servers go down
         } finally {
 
