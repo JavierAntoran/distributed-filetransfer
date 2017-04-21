@@ -20,7 +20,7 @@ public class ClientFileHandler extends ClientTCPHandler{
     private int lastChunk;
     private  RemoteServer rs;
 
-    private InputStream fileStream;
+    private FileOutputStream fOut;
 
 
     public ClientFileHandler(int lPort, RemoteServer rs, int rPort, int id, File f, int firstChunk, int lastChunk) {
@@ -33,7 +33,6 @@ public class ClientFileHandler extends ClientTCPHandler{
         this.rs = rs;
 
     }
-
 
     private long bwCheck() throws IOException {
 
@@ -64,12 +63,12 @@ public class ClientFileHandler extends ClientTCPHandler{
     private long getChunk() throws IOException {
 
         byte buff[] = new byte[FTPService.CHUNKSIZE];
-        FileOutputStream fOut = new FileOutputStream(f);
+        InputStream chunkStream = this.stream.getInputStream();
         int dataLength;
         long dataRead = 0;
         long startTime = System.nanoTime();
 
-        while ((dataLength = this.fileStream.read(buff)) != -1) {
+        while ((dataLength = chunkStream.read(buff)) != -1) {
             fOut.write(buff, 0, dataLength);
             dataRead += dataLength;
         }
@@ -77,42 +76,47 @@ public class ClientFileHandler extends ClientTCPHandler{
 
         long timeLapsed = endTime - startTime;
         long bw = (dataRead * 1000000000 / timeLapsed);
-        fOut.flush();
-        fOut.close();
+        chunkStream.close();
 
         return bw;
     }
-
-
-
 
     @Override
     public void run() {
 
         int i;
-        long bw = 0;
+        int nChunks = this.lastChunk - this.firstChunk;
+        long bw;
+        long avg_bw = 0;
 
         try {
-            fileStream = this.stream.getInputStream();
 
-            for (i = 0; i < this.lastChunk - this.firstChunk; i++) {
+            this.fOut = new FileOutputStream(f);
+
+            for (i = 0; i < nChunks; i++) {
 
                 establishTCP();
                 bw = getChunk();
+
+                if (i != (nChunks - 1)) {
+                    avg_bw += bw;
+                }
+
                 this.stream.close();
+                fOut.flush();
             }
-            this.fileStream.close();
+            fOut.close();
+
+            if (FTPService.UPDATE_BW_ON_GET && (avg_bw != 0)){
+                rs.setBw(avg_bw /= (nChunks - 1));
+            }
+
 
         } catch (IOException  e) {
             FTPService.logErr(e.getMessage());
             FTPService.logDebug(e);
             //TODO: implement resending request if servers go down
-        } finally {
-
-            if (FTPService.UPDATE_BW_ON_GET && (bw != 0)){
-                rs.setBw(bw);
-            }
-        }
+        } 
     }
 
 

@@ -51,8 +51,8 @@ public class RemoteServer{
         return this.name;
     }
 
-    public int getBw() {
-        return bw;
+    public long getBw() {
+        return this.bw;
     }
 
     public void setBw(long bw) {
