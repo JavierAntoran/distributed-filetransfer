@@ -9,7 +9,7 @@ import java.util.Arrays;
 /**
  * Created by StFrancisco on 11/04/2017.
  */
-public class BandWidthCheck extends HandleFTPConnection {
+/*public class BandWidthCheck extends HandleFTPConnection {
 
 
 
@@ -42,4 +42,4 @@ public class BandWidthCheck extends HandleFTPConnection {
 
     }
 }
-
+*/

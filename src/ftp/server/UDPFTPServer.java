@@ -145,9 +145,9 @@ public class UDPFTPServer {
         }
     }
 
-    private void checkBWAction() {
+    /*private void checkBWAction() {
         executor.execute(new BandWidthCheck(0, this.p.getAddress(), this.p.getPort()));
-    }
+    }*/
 
     private void handleCommand(){
         String sRX = new String(p.getData(),0, p.getLength());
@@ -166,9 +166,10 @@ public class UDPFTPServer {
                     this.getAction(sRX);
                     break;
 
-                case CHECKBW:
+                /*case CHECKBW:
                     this.checkBWAction();
                     break;
+                    */
 
                 case QUIT:
                     this.quitAction();
