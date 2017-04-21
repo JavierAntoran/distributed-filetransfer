@@ -46,33 +46,24 @@ public class HandleChunk extends HandleFTPConnection {
         return dataread;
     }
 
-    private void sendChunk(int nChunk) throws Exception {
-        sendChunk(nChunk, nChunk);
-    }
 
-    private void sendChunk(int firstChunk, int lastChunk) throws Exception {
+    private void sendChunk(int nChunk) throws Exception {
 
         int i;
-        String msg;
 
         // Sets read pointer position
 
-        for (i = firstChunk; i <= lastChunk; i++) {
 
-            int chunkSize = getChunk(i, FTPService.CHUNKSIZE);
-            System.out.println(chunkSize);
-            this.out.write(this.chunkBytes, 0, chunkSize);
-            System.out.println("file: " + this.f.getPath() + " chunk sent: " + i);
+        int chunkSize = getChunk(nChunk, FTPService.CHUNKSIZE);
+        System.out.println(chunkSize);
+        this.out.write(this.chunkBytes, 0, chunkSize);
+        System.out.println("file: " + this.f.getPath() + " chunk sent: " + nChunk);
 
-
-        }
-        msg = " chunk " + firstChunk + "-" + lastChunk;
-        sendUDPOK(msg);
 
 
     }
 
-    private void sendFile() throws Exception{
+    /*private void sendFile() throws Exception{
 
         System.out.println("Sending file: " + f.getPath());
 
@@ -84,25 +75,26 @@ public class HandleChunk extends HandleFTPConnection {
         }
         System.out.println("file: " + f.getPath() + "sent");
         sendUDPOK(null);
-    }
+    }*/
 
     public void run() {
 
         System.out.println("FTP chunk handler launched." );
+        int i;
+        String msg;
         try {
 
             establishTCP();
 
-            if (firstChunk != 0) {
-                sendChunk(firstChunk, lastChunk);
-            } else {
-                sendFile();
+            for (i = this.firstChunk; i <= this.lastChunk; i++) {
+                sendChunk(i);
+                reestablishTCP();
             }
-
             this.out.close();
-
             this.clientSocket.close();
             this.welcomingSocket.close();
+            msg = " chunk " + firstChunk + "-" + lastChunk;
+            sendUDPOK(msg);
 
         } catch (Exception fx) {}
     }

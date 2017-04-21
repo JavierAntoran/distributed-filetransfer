@@ -44,6 +44,14 @@ abstract public class HandleFTPConnection implements Runnable {
         this.out = this.clientSocket.getOutputStream();
     }
 
+    protected void reestablishTCP() throws IOException {
+
+        this.out.close();
+        this.clientSocket.close();
+        this.clientSocket = this.welcomingSocket.accept();
+        this.out = this.clientSocket.getOutputStream();
+    }
+
     protected void sendPortCommand(int port) throws IOException{
 
         String msg = FTPService.Response.PORT.toString();
