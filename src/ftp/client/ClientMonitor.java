@@ -17,6 +17,7 @@ abstract public class ClientMonitor {
     }
 
     public static synchronized void resetList(){
+        // TODO: check if there is a better way to do this.
         ClientMonitor.mergedList = new HashMap<String, RemoteFile>();
     }
 

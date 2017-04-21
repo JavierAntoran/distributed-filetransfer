@@ -11,8 +11,6 @@ import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,7 +25,6 @@ public class UDPFTPClient {
 
     private FTPService.Command com; //Last sent command
 
-    public static ExecutorService executor;
 
     // objetcs for communication
     private DatagramSocket s;
@@ -58,8 +55,6 @@ public class UDPFTPClient {
     }
 
     public UDPFTPClient(int lport, String serverFilename) {
-
-        executor = Executors.newFixedThreadPool(FTPService.MAXSERVERTHREADS);
 
         String sRX = ""; //mensaje que recibimos
         String sTX; //mensaje que enviamos
@@ -220,9 +215,10 @@ public class UDPFTPClient {
                     this.getAction(command);
                     break;
 
-                case CHECKBW:
+                /*case CHECKBW:
                     this.checkBWAction();
                     break;
+                    */
 
                 case QUIT:
                     this.quitAction();
@@ -262,12 +258,12 @@ public class UDPFTPClient {
             RemoteFile reqFile = fileList.get(reqFilename);
 
 
-            ArrayList<String> partsExtension = reqFile.getPartsExtension(this.serverList);
+            ArrayList<String> partsPerServer = reqFile.getPartsPerServer(this.serverList);
             int intval[];
 
             try {
                 for (RemoteServer server : this.serverList) {
-                    String serverFilePart = reqFilename + partsExtension.get(this.serverList.indexOf(server));
+                    String serverFilePart = reqFilename + partsPerServer.get(this.serverList.indexOf(server));
                     try {
                         FTPService.sendUDPmessage(this.s,
                                 String.format("%s %s",FTPService.Command.GET.toString(),
@@ -287,7 +283,7 @@ public class UDPFTPClient {
                             Thread cfhT = new Thread(
                                     new ClientFileHandler(
                                             0,
-                                            server.getAddr(),
+                                            server,
                                             FTPService.portFromResponse(response),
                                             server.hashCode(),
                                             Files.createFile(Paths.get(serverFilePart)).toFile(),
@@ -339,7 +335,7 @@ public class UDPFTPClient {
                 int dataLength;
                 File part;
                 for (int i = 0;  i < this.serverList.size(); i++) {
-                    part = Paths.get(reqFilename + partsExtension.get(i)).toFile();
+                    part = Paths.get(reqFilename + partsPerServer.get(i)).toFile();
                     fIn = new FileInputStream(part);
                     while ( (dataLength = fIn.read(data)) != -1) {
                         fOut.write(data,0,dataLength);
@@ -457,9 +453,9 @@ public class UDPFTPClient {
 
     }
 
-    private void checkBWAction(){
+    /*private void checkBWAction(){
 
-        String response;
+       String response;
         ArrayList<Thread> rsTList = new ArrayList<Thread>();
 
         for (RemoteServer server : this.serverList) {
@@ -470,6 +466,7 @@ public class UDPFTPClient {
                         server.getPort());
 
                 this.s.receive(packet);
+
 
                 response = FTPService.stringFromDatagramPacket(packet);
 
@@ -484,7 +481,7 @@ public class UDPFTPClient {
                     this.serverList.remove(server);
                 }
 
-            } catch (IOException e) {
+            } catch (Exception e) {
                 FTPService.logErr(e.getMessage());
                 FTPService.logDebug(e);
             }
@@ -523,7 +520,12 @@ public class UDPFTPClient {
         }
 
     }
-
+*/
+    /**
+     * function is deprecated, will be deleted
+     * @param fileSize
+     * @return
+     */
     private String[] getInterval(int fileSize) {
 
         int i;

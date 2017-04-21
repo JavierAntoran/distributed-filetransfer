@@ -50,9 +50,9 @@ public class RemoteFile {
      * ArrayList<String>
      */
     //TODO: switch to better algorithm
-    public ArrayList<String> getPartsExtension(ArrayList<RemoteServer> servers) {
+    public ArrayList<String> getPartsPerServer(ArrayList<RemoteServer> servers) {
 
-        ArrayList<String> partsExtension = new ArrayList<String>();
+        ArrayList<String> partsPerServer = new ArrayList<String>();
         int totalBW = 0;
         int relativeBW = 0;
         int chunkOffset = 0;
@@ -64,19 +64,19 @@ public class RemoteFile {
 
         for (RemoteServer rs: servers) {
             relativeBW = Math.round(nChunks * rs.getBw() / totalBW);
-            partsExtension.add(".part" + (chunkOffset + 1) + "-" + (relativeBW + chunkOffset));
+            partsPerServer.add(".part" + (chunkOffset + 1) + "-" + (relativeBW + chunkOffset));
             chunkOffset += relativeBW;
         }
 
         if (chunkOffset - nChunks > 0) {
-            partsExtension.set(servers.size()-1, ".part" + (chunkOffset - relativeBW + 1)
+            partsPerServer.set(servers.size()-1, ".part" + (chunkOffset - relativeBW + 1)
                     + "-" + (chunkOffset - 1));
         } else if (chunkOffset - nChunks > 0) {
-            partsExtension.set(servers.size()-1, ".part" + (chunkOffset - relativeBW + 1)
+            partsPerServer.set(servers.size()-1, ".part" + (chunkOffset - relativeBW + 1)
                     + "-" + (chunkOffset + 1));
         }
 
-        return partsExtension;
+        return partsPerServer;
     }
 
 }

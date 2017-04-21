@@ -25,6 +25,7 @@ public class FTPService {
     public static final int CHUNKSIZE = 1024 * 1024; //bytes por bloque
     public static final int BWCHECKSIZE = 30; //size if data used to check bandwidth
     public static final int MAXSERVERTHREADS = 20; //max concurrent tcp handlers
+    public static final     boolean UPDATE_BW_ON_GET = true;
 
 
     static public enum Command {HELLO, LIST, GET, QUIT, ERROR, CHECKBW};

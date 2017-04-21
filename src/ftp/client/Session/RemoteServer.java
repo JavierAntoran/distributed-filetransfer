@@ -10,19 +10,17 @@ import java.net.InetAddress;
 /**
  * Created by StFrancisco on 10/04/2017.
  */
-public class RemoteServer extends ClientTCPHandler{
+public class RemoteServer{
 
     private String name;
     private int bw;
     private InetAddress addr;
     private int port;
 
-    private int dataPort;
-
     private boolean isUP = true; //used to mark for deletion if down
 
     public RemoteServer(String name, InetAddress addr, int port, int bw) {
-        super(0,addr,0);
+        this.addr = addr;
         this.name = name;
         this.bw = bw;
         this.addr = addr;
@@ -30,7 +28,7 @@ public class RemoteServer extends ClientTCPHandler{
     }
 
     public RemoteServer(InetAddress addr, int port, int bw) {
-        super(0,addr,0);
+        this.addr = addr;
         this.name = addr.getHostName() + ":" + port;
         this.bw = bw;
         this.addr = addr;
@@ -57,6 +55,10 @@ public class RemoteServer extends ClientTCPHandler{
         return bw;
     }
 
+    public void setBw(int bw) {
+        this.bw = bw;
+    }
+
     public boolean isUP() {
         return isUP;
     }
@@ -65,7 +67,7 @@ public class RemoteServer extends ClientTCPHandler{
     public void run() {
 
         if (this.rPort == this.port) {
-            FTPService.logErr("DATA port and CONTROL port are equal");
+            FTPService.logErr("DATA port and CONTROL port are the same");
         } else {
             try {
 
