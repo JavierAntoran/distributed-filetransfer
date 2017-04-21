@@ -13,13 +13,13 @@ import java.net.InetAddress;
 public class RemoteServer{
 
     private String name;
-    private int bw;
+    private long bw;
     private InetAddress addr;
     private int port;
 
     private boolean isUP = true; //used to mark for deletion if down
 
-    public RemoteServer(String name, InetAddress addr, int port, int bw) {
+    public RemoteServer(String name, InetAddress addr, int port, long bw) {
         this.addr = addr;
         this.name = name;
         this.bw = bw;
@@ -27,7 +27,7 @@ public class RemoteServer{
         this.port = port;
     }
 
-    public RemoteServer(InetAddress addr, int port, int bw) {
+    public RemoteServer(InetAddress addr, int port, long bw) {
         this.addr = addr;
         this.name = addr.getHostName() + ":" + port;
         this.bw = bw;
@@ -55,7 +55,7 @@ public class RemoteServer{
         return bw;
     }
 
-    public void setBw(int bw) {
+    public void setBw(long bw) {
         this.bw = bw;
     }
 

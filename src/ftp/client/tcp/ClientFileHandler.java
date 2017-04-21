@@ -20,6 +20,8 @@ public class ClientFileHandler extends ClientTCPHandler{
     private int lastChunk;
     private  RemoteServer rs;
 
+    private InputStream fileStream;
+
 
     public ClientFileHandler(int lPort, RemoteServer rs, int rPort, int id, File f, int firstChunk, int lastChunk) {
         super(lPort, rs.getAddr(), rPort);
@@ -32,16 +34,16 @@ public class ClientFileHandler extends ClientTCPHandler{
 
     }
 
-    private long getFile() throws IOException {
+    /*private long getFile() throws IOException {
 
         byte buff[] = new byte[10000000];
-        InputStream dataStream = stream.getInputStream();
+        InputStream fileStream = stream.getInputStream();
         FileOutputStream fOut = new FileOutputStream(f);
 
         int dataLength;
         long totalData = 0;
         long startTime = System.nanoTime();
-        while ((dataLength = dataStream.read(buff, 0, buff.length)) != -1) {
+        while ((dataLength = fileStream.read(buff, 0, buff.length)) != -1) {
             fOut.write(buff, 0, dataLength);
             totalData += dataLength;
         }
@@ -52,16 +54,17 @@ public class ClientFileHandler extends ClientTCPHandler{
         fOut.flush();
 
         fOut.close();
-        dataStream.close();
+        fileStream.close();
         return bw;
     }
+    */
 
     private long bwCheck() throws IOException {
 
         byte buff[] = new byte[FTPService.CHUNKSIZE];
         InputStream dataStream = stream.getInputStream();
         long dataLength;
-        long dataRead;
+        long dataRead = 0;
 
         long startTime = System.nanoTime();
 
@@ -69,18 +72,15 @@ public class ClientFileHandler extends ClientTCPHandler{
             dataRead += dataLength;
         }
 
-        if (dataRead != FTPService.BWCHECKSIZE * FTPService.CHUNKSIZE) {
-            System.out.println("error in number of bytes read");
-            //TODO: do something
 
-        } else {
-            long endTime = System.nanoTime();
 
-            long timeLapsed = endTime - startTime;
-            long bw = (dataRead * 1000000000 / timeLapsed);
+        long endTime = System.nanoTime();
 
-            System.out.println(this.addr.getHostName() +
-                    ": bandwidth updated to: " +  ((float) bw / 1000000));
+        long timeLapsed = endTime - startTime;
+        long bw = (dataRead * 1000000000 / timeLapsed);
+
+        System.out.println(this.rHost.getHostName() +
+                ": bandwidth updated to: " +  ((float) bw / 1000000));
 
         return 0;
     }
@@ -88,18 +88,23 @@ public class ClientFileHandler extends ClientTCPHandler{
     private long getChunk() throws IOException {
 
         byte buff[] = new byte[FTPService.CHUNKSIZE];
-        InputStream dataStream = stream.getInputStream();
         FileOutputStream fOut = new FileOutputStream(f);
         int dataLength;
+        long dataRead = 0;
+        long startTime = System.nanoTime();
 
-        while ((dataLength = dataStream.read(buff)) != -1) {
+        while ((dataLength = this.fileStream.read(buff)) != -1) {
             fOut.write(buff, 0, dataLength);
+            dataRead += dataLength;
         }
+        long endTime = System.nanoTime();
+
+        long timeLapsed = endTime - startTime;
+        long bw = (dataRead * 1000000000 / timeLapsed);
         fOut.flush();
-
         fOut.close();
-        dataStream.close();
 
+        return bw;
     }
 
 
@@ -108,20 +113,27 @@ public class ClientFileHandler extends ClientTCPHandler{
     @Override
     public void run() {
 
-        establishTCP();
+        int i;
+        long bw = 0;
 
         try {
-                getChunk();
+            fileStream = this.stream.getInputStream();
 
-            this.stream.close();
+            for (i = 0; i < this.lastChunk - this.firstChunk; i++) {
 
-        } catch (IOException benix){
+                establishTCP();
+                bw = getChunk();
+                this.stream.close();
+            }
+            this.fileStream.close();
+
+        } catch (IOException be3nix){
             System.out.println(benix.getMessage());
             //TODO: implement resending request if servers go down
         } finally {
 
-            if (FTPService.UPDATE_BW_ON_GET){
-                rs.setBw(this.bw);
+            if (FTPService.UPDATE_BW_ON_GET && (bw != 0)){
+                rs.setBw(bw);
             }
         }
     }
