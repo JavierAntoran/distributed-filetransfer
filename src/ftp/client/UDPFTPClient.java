@@ -370,85 +370,89 @@ public class UDPFTPClient {
 
         String response;
 
-        ArrayList<String> partsExts = new ArrayList<String>();
-
         ArrayList<Thread> clhList = new ArrayList<Thread>();
 
-        try {
-            ClientMonitor.resetList();
+        ClientMonitor.resetList();
 
-            for (RemoteServer server : this.serverList) {
-                try {
-                    FTPService.sendUDPmessage(this.s,
-                            FTPService.Command.LIST.toString(),
-                            server.getAddr(),
-                            server.getPort());
+        for (RemoteServer server : this.serverList) {
+            try {
+                FTPService.sendUDPmessage(this.s,
+                        FTPService.Command.LIST.toString(),
+                        server.getAddr(),
+                        server.getPort());
 
-                    this.s.receive(packet);
+                this.s.receive(packet);
 
-                    response = FTPService.stringFromDatagramPacket(packet);
+                response = FTPService.stringFromDatagramPacket(packet);
 
-                    FTPService.logInfo(String.format("< [%s] %s ", server, response));
+                FTPService.logInfo(String.format("< [%s:%s] %s ",
+                        packet.getAddress().getHostAddress(),
+                        packet.getPort(), response));
 
-                    if (FTPService.responseFromString(response) == FTPService.Response.PORT) {
-                        Thread clhT = new Thread(new ClientListHandler(0,
-                                server.getAddr(),
-                                FTPService.portFromResponse(response),
-                                server.hashCode()));
-                        clhT.start();
-                        clhList.add(clhT);
-
-                    } else {
-                        this.serverList.remove(server);
-                    }
-
-                } catch (IOException e) {
-                    FTPService.logErr(e.getMessage());
-                    FTPService.logDebug(e);
+                if (FTPService.responseFromString(response) == FTPService.Response.PORT) {
+                    Thread clhT = new Thread(new ClientListHandler(0,
+                            server,
+                            FTPService.portFromResponse(response),
+                            server.hashCode()));
+                    FTPService.logWarn(String.format("Running thread %s for %s", clhT.getId(), server.getName()));
+                    clhT.start();
+                    clhList.add(clhT);
+                } else {
+                    FTPService.logWarn(String.format("Unexpected PORT response from %s", server.getName()));
+                    FTPService.logWarn(String.format("Deleting % server form available servers", server.getName()));
+                    this.serverList.remove(server);
                 }
-            }
 
-            for (Thread clh : clhList) {
-                try {
-                    clh.join();
-                }catch (InterruptedException e) {
-                    FTPService.logErr(e.getMessage());
-                    FTPService.logDebug(e);
+            } catch (IOException e) {
+                FTPService.logErr(e.getMessage());
+                FTPService.logDebug(e);
+            }
+        }
+
+        for (Thread clh : clhList) {
+            try {
+                clh.join();
+            }catch (InterruptedException e) {
+                FTPService.logErr(e.getMessage());
+                FTPService.logDebug(e);
+            }
+        }
+
+        for (RemoteServer server : this.serverList) {
+            try {
+                s.receive(packet);
+
+                response = FTPService.stringFromDatagramPacket(packet);
+
+                FTPService.logInfo(String.format("< [%s:%s] %s ",
+                        packet.getAddress().getHostAddress(),
+                        packet.getPort(), response));
+
+                if (FTPService.responseFromString(response) != FTPService.Response.OK) {
+                    FTPService.logWarn(String.format("Unexpected LIST response from %s:%s",
+                            packet.getAddress().getHostAddress(),
+                            packet.getPort()));
                 }
+            } catch (IOException e) {
+                FTPService.logErr(e.getMessage());
+                FTPService.logDebug(e);
             }
+        }
 
-            for (RemoteServer server : this.serverList) {
-                try {
-                    s.receive(packet);
+        this.fileList = ClientMonitor.getMergedList();
 
-                    response = FTPService.stringFromDatagramPacket(packet);
-
-                    FTPService.logInfo(String.format("< [%s] %s ", server, response));
-
-                    if (FTPService.responseFromString(response) != FTPService.Response.OK) {
-                        FTPService.logWarn(String.format("Unexpected LIST response from %s", server.getName()));
-                    }
-                } catch (IOException e) {
-                    FTPService.logErr(e.getMessage());
-                    FTPService.logDebug(e);
-                }
+        if (this.fileList.size() > 0) {
+            System.out.println("Size    \tFilename");
+            System.out.println("--------------------");
+            for (Map.Entry<String, RemoteFile> entry : fileList.entrySet()) {
+                RemoteFile rFile = entry.getValue();
+                System.out.println(
+                        String.format("%1$8s\t%2$s",
+                                rFile.getFileSize(),
+                                rFile.getFileName()));
             }
-
-            this.fileList = ClientMonitor.getMergedList();
-
-            if (this.fileList.size() > 0) {
-                System.out.println("Size    \tFilename");
-                System.out.println("--------------------");
-                for (Map.Entry<String, RemoteFile> entry : fileList.entrySet()) {
-                    RemoteFile rFile = entry.getValue();
-                    System.out.println(String.format("%1$8s\t%2$s", rFile.getFileSize(), rFile.getFileName()));
-                }
-            } else {
-                System.out.println("Directory empty");
-            }
-        } catch (ConcurrentModificationException e) {
-            FTPService.logErr(e.getMessage());
-            FTPService.logDebug(e);
+        } else {
+            System.out.println("Directory empty");
         }
 
     }

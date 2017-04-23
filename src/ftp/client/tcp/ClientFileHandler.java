@@ -18,19 +18,16 @@ public class ClientFileHandler extends ClientTCPHandler{
     private File f;
     private int firstChunk;
     private int lastChunk;
-    private  RemoteServer rs;
 
     private FileOutputStream fOut;
 
 
     public ClientFileHandler(int lPort, RemoteServer rs, int rPort, int id, File f, int firstChunk, int lastChunk) {
-        super(lPort, rs.getAddr(), rPort);
+        super(lPort, rs, rPort);
         this.id = id;
         this.firstChunk = firstChunk;
         this.lastChunk = lastChunk;
         this.f = f;
-
-        this.rs = rs;
 
     }
 

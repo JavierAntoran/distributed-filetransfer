@@ -1,5 +1,7 @@
 package ftp.client.tcp;
 
+import ftp.client.Session.RemoteServer;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -9,22 +11,19 @@ import java.net.Socket;
  */
 abstract public class ClientTCPHandler implements Runnable{
 
+
+    protected RemoteServer rs;
     protected InetAddress rHost;
     protected int rPort;
     protected int lPort;
 
     protected Socket stream;
 
-    public ClientTCPHandler(int lPort, InetAddress rHost, int rPort) {
-
-        this.rHost = rHost;
+    public ClientTCPHandler(int lPort, RemoteServer rs, int rPort) {
+        this.rs = rs;
         this.rPort = rPort;
         this.lPort = lPort;
 
-    }
-
-    public void setRemoteHost(InetAddress rHost) {
-        this.rHost = rHost;
     }
 
     public void setRemotePort(int remotePort) {
@@ -39,7 +38,7 @@ abstract public class ClientTCPHandler implements Runnable{
 
         try {
 
-            this.stream = new Socket(this.rHost, this.rPort, null, lPort);
+            this.stream = new Socket(this.rs.getAddr(), this.rPort, null, lPort);
 
         } catch (IOException iox) {
             System.out.println(iox);

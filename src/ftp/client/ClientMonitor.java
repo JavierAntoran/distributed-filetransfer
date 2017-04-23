@@ -1,5 +1,6 @@
 package ftp.client;
 
+import ftp.FTPService;
 import ftp.client.Session.RemoteFile;
 
 import java.util.ArrayList;
@@ -22,21 +23,25 @@ abstract public class ClientMonitor {
     }
 
     public static synchronized void writeList(ArrayList<RemoteFile> list) {
-        int i, n;
-
+        RemoteFile rf;
         for(RemoteFile rFile: list) {
             if (!mergedList.containsKey(rFile.getFileName())) {
                 mergedList.put(rFile.getFileName(), rFile);
+            } else {
+                rf = mergedList.get(rFile.getFileName());
+                if (rFile.getFileSize() == rf.getFileSize()) {
+                    mergedList.get(rFile.getFileName()).addServer(rFile.getServerList().get(0));
+                } else {
+                    FTPService.logWarn(
+                            String.format("Filename %s detected on %s with " +
+                                    "different size",
+                                    rFile.getFileName(),
+                                    rFile.getServerList().get(0))
+                    );
+                }
             }
         }
 
     }
-
-    protected static synchronized void writeFile() { } //unused for now
-
-
-
-
-
 
 }

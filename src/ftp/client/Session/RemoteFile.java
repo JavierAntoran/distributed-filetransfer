@@ -13,6 +13,8 @@ public class RemoteFile {
     private long fileSize;
     private long nChunks;
 
+    private ArrayList<RemoteServer> serverList = new ArrayList<RemoteServer>();
+
     public RemoteFile(){}
 
     public RemoteFile(String fileName, long fileSize) {
@@ -41,6 +43,22 @@ public class RemoteFile {
 
     public long getnChunks() {
         return nChunks;
+    }
+
+    public void addServer(RemoteServer rs) {
+        if (! this.serverList.contains(rs) ) {
+            this.serverList.add(rs);
+        }
+    }
+
+    public void removeServer(RemoteServer rs) {
+        if (this.serverList.contains(rs)) {
+            this.serverList.remove(rs);
+        }
+    }
+
+    public ArrayList<RemoteServer> getServerList() {
+        return this.serverList;
     }
 
     /**

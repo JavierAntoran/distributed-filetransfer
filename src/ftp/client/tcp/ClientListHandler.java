@@ -1,12 +1,13 @@
 package ftp.client.tcp;
 
+import ftp.FTPService;
 import ftp.client.ClientMonitor;
 import ftp.client.Session.RemoteFile;
+import ftp.client.Session.RemoteServer;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,8 +20,8 @@ public class ClientListHandler extends ClientTCPHandler {
     protected ArrayList<RemoteFile> fileList = new ArrayList<RemoteFile>();
     private int id;
 
-    public ClientListHandler(int lPort, InetAddress rHost, int rPort, int id) {
-        super(lPort, rHost, rPort);
+    public ClientListHandler(int lPort, RemoteServer rs, int rPort, int id) {
+        super(lPort, rs, rPort);
         this.id = id;
     }
 
@@ -58,6 +59,7 @@ public class ClientListHandler extends ClientTCPHandler {
                     RemoteFile rFile = new RemoteFile();
                     rFile.setFileName(m.group(1));
                     rFile.setFileSize(Integer.parseInt(m.group(2)));
+                    rFile.addServer(this.rs);
                     this.fileList.add(rFile);
                 }
             }
@@ -65,9 +67,8 @@ public class ClientListHandler extends ClientTCPHandler {
             ClientMonitor.writeList(this.fileList);
 
         } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println(e.getMessage());
-            //TODO: handle exception if server goes down mid stream by updating serverlist
+            FTPService.logErr(e.getMessage());
+            FTPService.logDebug(e);
         }
 
     }
