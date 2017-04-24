@@ -4,6 +4,8 @@ import ftp.FTPService;
 
 import java.util.ArrayList;
 
+import static java.util.Arrays.sort;
+
 /**
  * Created by StFrancisco on 10/04/2017.
  */
@@ -74,7 +76,7 @@ public class RemoteFile {
         int totalBW = 0;
         int relativeBW = 0;
         int chunkOffset = 0;
-        long nChunks = FTPService.getNChunks(fileSize, FTPService.CHUNKSIZE);
+        long nChunks = FTPService.getNChunks(this.fileSize, FTPService.CHUNKSIZE);
 
         for (RemoteServer rs: servers) {
             totalBW += rs.getBw();
@@ -95,6 +97,89 @@ public class RemoteFile {
         }
 
         return partsPerServer;
+    }
+
+    public static int[] distributeChunks(ArrayList<RemoteServer> servers, long fileSize, int[] chunks) {
+
+        int partsPerServer[] = new int[servers.size()];
+        int totalBW = 0;
+        int nChunks = chunks.length;
+        int residualChunks = nChunks;
+        int chunkBytes = 0;
+        float minTime = 1000000; //max transfer time is 11.57 days
+        float serverTime;
+        int minTimeIndex = 0;
+        boolean unevenChunk = false;
+        int unevenIndex = servers.size() + 1;
+        int nextChunk = (int) FTPService.getNChunks(fileSize, FTPService.CHUNKSIZE) - 1;
+
+        int[] out = new int[2 * servers.size()]; //default initialized to 0
+
+        int i;
+        int j;
+
+        sort(chunks);
+
+        for (RemoteServer rs: servers) {
+            totalBW += rs.getBw();
+        }
+
+        for (i = 0; i < servers.size(); i++) {
+            partsPerServer[i] = (int) (nChunks * servers.get(i).getBw() / totalBW);
+            residualChunks -= partsPerServer[i];
+        }
+
+        for (j = 0; j < residualChunks; j++) {
+
+            chunkBytes = FTPService.CHUNKSIZE;
+
+            if ((j == residualChunks - 1) && ( fileSize % FTPService.CHUNKSIZE != 0)) {
+                chunkBytes = (int) (fileSize % FTPService.CHUNKSIZE);
+                unevenChunk = true;
+            }
+
+            for (i = 0; i < servers.size(); i++) {
+                serverTime = (partsPerServer[i] * FTPService.CHUNKSIZE + chunkBytes) / servers.get(i).getBw();
+                if ( serverTime < minTime ) {
+                    minTime = serverTime;
+                    minTimeIndex = i;
+                }
+            }
+            partsPerServer[ minTimeIndex ]++;
+        }
+
+        if (unevenChunk) {
+            unevenIndex = i;
+            out[2 * unevenIndex + 1] = chunks[chunks.length - 1];
+            out[2 * unevenIndex] = chunks[chunks.length - partsPerServer[unevenIndex]];
+            nextChunk -= partsPerServer[unevenIndex];
+        }
+
+
+        for (i = 0; (i < servers.size()); i++) {
+            if (i == unevenIndex) {
+                continue;
+            }
+            out[2 * i + 1] = nextChunk;
+            out[2 * i] = out[2 * i + 1] - partsPerServer[i] + 1;
+            nextChunk -= partsPerServer[i];
+        }
+
+        return out;
+    }
+
+    public static int minIndexFloat(float[] array){
+
+        int minIndex = 0;
+        float minValue = 0;
+
+        for (int i = 0; i < array.length; i++) {
+            if (array[i] < minValue) {
+                minValue = array[i];
+                minIndex = i;
+            }
+        }
+            return minIndex;
     }
 
 }
