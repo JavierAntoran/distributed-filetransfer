@@ -56,8 +56,15 @@ public class HandleChunk extends HandleFTPConnection {
         this.out.write(this.chunkBytes, 0, chunkSize);
         System.out.println("file: " + this.f.getPath() + " chunk sent: " + nChunk);
 
+    }
 
-
+    private void sendFile() throws Exception{
+        byte buffer[] = new byte[10000000];
+        int dataLength;
+        while ((dataLength = this.fis.read(buffer)) > 0) {
+            this.out.write(buffer, 0, dataLength);
+        }
+        System.out.println("file: " + f.getPath() + "sent");
     }
 
     public void run() {
@@ -65,18 +72,26 @@ public class HandleChunk extends HandleFTPConnection {
         System.out.println("FTP chunk handler launched." );
         int i;
         String msg;
+        boolean fileMode = ((this.firstChunk == this.lastChunk) && (this.firstChunk == 0));
+        msg = "";
         try {
 
             establishTCP();
 
-            for (i = this.firstChunk; i <= this.lastChunk; i++) {
-                sendChunk(i);
-                reestablishTCP();
+            if (fileMode) {
+
+            } else {
+
+                sendFile();
+                for (i = this.firstChunk; i <= this.lastChunk; i++) {
+                    sendChunk(i);
+                    reestablishTCP();
+                }
+                msg = " chunk " + firstChunk + "-" + lastChunk;
             }
             this.out.close();
             this.clientSocket.close();
             this.welcomingSocket.close();
-            msg = " chunk " + firstChunk + "-" + lastChunk;
             sendUDPOK(msg);
 
         } catch (Exception fx) {}
