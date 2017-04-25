@@ -111,7 +111,7 @@ public class RemoteFile {
         int minTimeIndex = 0;
         boolean unevenChunk = false;
         int unevenIndex = servers.size() + 1;
-        int nextChunk = (int) FTPService.getNChunks(fileSize, FTPService.CHUNKSIZE) - 1;
+        int nextChunk = (int) FTPService.getNChunks(fileSize, FTPService.CHUNKSIZE);
 
         int[] out = new int[2 * servers.size()]; //default initialized to 0
 
