@@ -124,20 +124,25 @@ public class RemoteFile {
             totalBW += rs.getBw();
         }
 
+        // Get residual chunks from fair distribution
         for (i = 0; i < servers.size(); i++) {
             partsPerServer[i] = (int) (nChunks * servers.get(i).getBw() / totalBW);
             residualChunks -= partsPerServer[i];
         }
 
+        // If there are residual chunks assign them in the most efficient
+        // way in terms of global time consumption
         for (j = 0; j < residualChunks; j++) {
 
             chunkBytes = FTPService.CHUNKSIZE;
 
+            // Check if last chunk is a non-fullsize chunk
             if ((j == residualChunks - 1) && ( fileSize % FTPService.CHUNKSIZE != 0)) {
                 chunkBytes = (int) (fileSize % FTPService.CHUNKSIZE);
                 unevenChunk = true;
             }
 
+            // Calc minimal time for efficient chunk distribution
             for (i = 0; i < servers.size(); i++) {
                 serverTime = (partsPerServer[i] * FTPService.CHUNKSIZE + chunkBytes) / servers.get(i).getBw();
                 if ( serverTime < minTime ) {
@@ -147,6 +152,7 @@ public class RemoteFile {
             }
             partsPerServer[ minTimeIndex ]++;
         }
+
 
         if (unevenChunk) {
             unevenIndex = i;
