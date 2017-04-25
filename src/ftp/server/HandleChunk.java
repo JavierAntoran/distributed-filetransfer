@@ -39,7 +39,7 @@ public class HandleChunk extends HandleFTPConnection {
         System.out.printf("Reading chunk %d\n", nChunk);
         //TODO: check if amount of bytes read is correct for last chunk
         this.fis.getChannel().position((nChunk-1)*FTPService.CHUNKSIZE);
-        if ( (dataread = fis.read(chunkBytes) ) <= 0) {
+        if ( (dataread = this.fis.read(chunkBytes) ) <= 0) {
             System.out.println("error leyendo chunkBytes: " + nChunk);
         }
 
@@ -81,17 +81,20 @@ public class HandleChunk extends HandleFTPConnection {
             if (fileMode) {
 
             } else {
-
                 sendFile();
+
                 for (i = this.firstChunk; i <= this.lastChunk; i++) {
                     sendChunk(i);
-                    reestablishTCP();
+                    if (i == this.lastChunk) {
+                        reestablishTCP();
+                    }
                 }
                 msg = " chunk " + firstChunk + "-" + lastChunk;
             }
             this.out.close();
             this.clientSocket.close();
             this.welcomingSocket.close();
+            this.fis.close();
             sendUDPOK(msg);
 
         } catch (Exception fx) {}
