@@ -18,6 +18,7 @@ public class ClientFileHandler extends ClientTCPHandler{
     private File f;
     private int firstChunk;
     private int lastChunk;
+    private int lastReceivedChunk;
 
     private FileOutputStream fOut;
 
@@ -109,6 +110,7 @@ public class ClientFileHandler extends ClientTCPHandler{
 
                 this.stream.close();
                 fOut.flush();
+                this.lastReceivedChunk = this.firstChunk + i;
             }
             fOut.close();
 
@@ -120,9 +122,18 @@ public class ClientFileHandler extends ClientTCPHandler{
         } catch (IOException  e) {
             FTPService.logErr(e.getMessage());
             FTPService.logDebug(e);
-            //TODO: implement resending request if servers go down
         } 
     }
 
+    public int getFirstChunk() {
+        return firstChunk;
+    }
 
+    public int getLastChunk() {
+        return lastChunk;
+    }
+
+    public int getLastReceivedChunk() {
+        return lastReceivedChunk;
+    }
 }
