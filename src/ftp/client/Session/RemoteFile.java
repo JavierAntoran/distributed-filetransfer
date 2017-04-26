@@ -99,7 +99,7 @@ public class RemoteFile {
         return partsPerServer;
     }
 
-    public static int[] distributeChunks(ArrayList<RemoteServer> servers, long fileSize, int[] chunks) {
+    public static int[] distributeChunks(ArrayList<RemoteServer> servers, long fileSize, Integer[] chunks) {
 
         int partsPerServer[] = new int[servers.size()];
         int totalBW = 0;
@@ -155,19 +155,24 @@ public class RemoteFile {
 
 
         if (unevenChunk) {
-            unevenIndex = i;
+            unevenIndex = minTimeIndex;
             out[2 * unevenIndex + 1] = chunks[chunks.length - 1];
             out[2 * unevenIndex] = chunks[chunks.length - partsPerServer[unevenIndex]];
             nextChunk -= partsPerServer[unevenIndex];
         }
 
 
-        for (i = 0; (i < servers.size()); i++) {
+        for (i = 0; i < servers.size(); i++) {
             if (i == unevenIndex) {
                 continue;
             }
-            out[2 * i + 1] = nextChunk;
-            out[2 * i] = out[2 * i + 1] - partsPerServer[i] + 1;
+            if (partsPerServer[i] == 0) {
+                out[2 * i + 1] = 0;
+                out[2 * i] = 0;
+            } else {
+                out[2 * i + 1] = nextChunk;
+                out[2 * i] = out[2 * i + 1] - partsPerServer[i] + 1;
+            }
             nextChunk -= partsPerServer[i];
         }
 
