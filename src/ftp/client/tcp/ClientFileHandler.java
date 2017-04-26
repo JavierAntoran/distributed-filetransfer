@@ -66,7 +66,7 @@ public class ClientFileHandler extends ClientTCPHandler{
         long dataRead = 0;
         long startTime = System.nanoTime();
 
-        this.fOut.getChannel().position((nChunk)*FTPService.CHUNKSIZE);
+        this.fOut.getChannel().position((nChunk-1)*FTPService.CHUNKSIZE);
 
         while ((dataLength = chunkStream.read(buff)) != -1) {
             this.fOut.write(buff, 0, dataLength);
@@ -91,7 +91,7 @@ public class ClientFileHandler extends ClientTCPHandler{
     public void run() {
 
         int i;
-        int nChunks = this.lastChunk - this.firstChunk;
+        int nChunks = this.lastChunk - this.firstChunk + 1;
         long bw;
         long avg_bw = 0;
 
