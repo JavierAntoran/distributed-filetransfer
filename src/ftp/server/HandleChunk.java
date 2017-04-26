@@ -49,8 +49,6 @@ public class HandleChunk extends HandleFTPConnection {
 
     private void sendChunk(int nChunk) throws Exception {
 
-        int i;
-
         int chunkSize = getChunk(nChunk, FTPService.CHUNKSIZE);
         System.out.println(chunkSize);
         this.out.write(this.chunkBytes, 0, chunkSize);
@@ -79,13 +77,12 @@ public class HandleChunk extends HandleFTPConnection {
             establishTCP();
 
             if (fileMode) {
-
-            } else {
                 sendFile();
+            } else {
 
                 for (i = this.firstChunk; i <= this.lastChunk; i++) {
                     sendChunk(i);
-                    if (i == this.lastChunk) {
+                    if (i != this.lastChunk) {
                         reestablishTCP();
                     }
                 }
@@ -97,7 +94,10 @@ public class HandleChunk extends HandleFTPConnection {
             this.fis.close();
             sendUDPOK(msg);
 
-        } catch (Exception fx) {}
+        } catch (Exception e) {
+            FTPService.logErr(e.getMessage());
+            FTPService.logDebug(e);
+        }
     }
 
 
