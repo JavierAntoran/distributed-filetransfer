@@ -254,7 +254,9 @@ public class UDPFTPClient {
 
         ArrayList<Thread> cfhThreadList;
         ArrayList<ClientFileHandler> cfhList;
-        ArrayList<RemoteServer> reqFileRS;
+        ArrayList<RemoteServer> fileRS;
+        ArrayList<RemoteServer> upFileRS;
+        ArrayList<RemoteServer> downFileRS;
 
         String reqFilename;
         File file;
@@ -290,31 +292,39 @@ public class UDPFTPClient {
 
             File partFile = Files.createFile(Paths.get(reqFilename+".part")).toFile();
 
-                while (receivedChunks < nChunks && reqFile.getServerList().size() != 0) {
-                    cfhThreadList = new ArrayList<Thread>();
-                    cfhList = new ArrayList<ClientFileHandler>();
+            fileRS = reqFile.getServerList();
 
-                    chunksPerServer = RemoteFile.distributeChunks(
-                            reqFile.getServerList(),
-                            reqFile.getFileSize(),
-                            chunks);
+            while (receivedChunks < nChunks && fileRS.size() != 0) {
+                cfhThreadList = new ArrayList<Thread>();
+                cfhList = new ArrayList<ClientFileHandler>();
+                ArrayList<Integer> serverTcpPorts = new ArrayList<Integer>();
 
-                    for (i=0; i<chunksPerServer.length; i=i+2){
-                        FTPService.logDebug(String.format(
-                                "Parts for server: %d-%d",
-                                chunksPerServer[i],
-                                chunksPerServer[i+1])
-                        );
-                    }
+                chunksPerServer = RemoteFile.distributeChunks(
+                        fileRS,
+                        reqFile.getFileSize(),
+                        chunks);
 
-                    reqFileRS = reqFile.getServerList();
-                    Iterator<RemoteServer> rfServerListIterator =  reqFileRS.listIterator();
-                    while(rfServerListIterator.hasNext()) {
-                        RemoteServer server = rfServerListIterator.next();
+                for (i=0; i<chunksPerServer.length; i=i+2){
+                    FTPService.logDebug(String.format(
+                            "Parts for server: %d-%d",
+                            chunksPerServer[i],
+                            chunksPerServer[i+1])
+                    );
+                }
 
-                        int srvIdx = reqFileRS.indexOf(server);
+                ArrayList<Integer> chunksLeft = new ArrayList<Integer>();
+
+                downFileRS = new ArrayList<RemoteServer>();
+                upFileRS = new ArrayList<RemoteServer>();
+
+                for(RemoteServer server: fileRS) {
+
+                    int srvIdx = fileRS.indexOf(server);
+
+                    if (chunksPerServer[2*srvIdx] != 0 &&  chunksPerServer[2*srvIdx + 1] != 0) {
+
                         String serverFilePart = reqFilename +
-                                String.format(".part%d-%d", chunksPerServer[2*srvIdx], chunksPerServer[2*srvIdx + 1]);
+                                String.format(".part%d-%d", chunksPerServer[2 * srvIdx], chunksPerServer[2 * srvIdx + 1]);
 
                         try {
                             FTPService.sendUDPmessage(this.s,
@@ -332,79 +342,98 @@ public class UDPFTPClient {
                                     packet.getPort(), response));
 
                             if (FTPService.responseFromString(response) == FTPService.Response.PORT) {
-                                ClientFileHandler cfh = new ClientFileHandler(
-                                        0,
-                                        server,
-                                        FTPService.portFromResponse(response),
-                                        server.hashCode(),
-                                        partFile,
-                                        chunksPerServer[2*srvIdx], chunksPerServer[2*srvIdx + 1]);
-                                Thread cfhT = new Thread(cfh);
-                                FTPService.logWarn(String.format("Running thread %s for %s", cfhT.getId(), server.getName()));
-                                cfhT.start();
-                                cfhList.add(cfh);
-                                cfhThreadList.add(cfhT);
+                                serverTcpPorts.add(FTPService.portFromResponse(response));
+                                upFileRS.add(server);
                             } else {
                                 FTPService.logWarn(String.format("Unexpected PORT response from %s", server.getName()));
                                 FTPService.logWarn(String.format("Deleting %S server form available servers", server.getName()));
-                                reqFile.removeServer(server);
-                            }
-
-                        } catch (IOException e) {
-                            FTPService.logErr(e.getMessage());
-                            FTPService.logDebug(e);
-                        }
-                    }
-
-                    reqFileRS = reqFile.getServerList();
-                    ArrayList<Integer> chunksLeft = new ArrayList<Integer>();
-                    for (Thread cfhT : cfhThreadList) {
-                        int cfhIdx = cfhThreadList.indexOf(cfhT);
-                        ClientFileHandler cfhL = cfhList.get(cfhIdx);
-                        try {
-                            cfhT.join();
-                            if (cfhL.getLastReceivedChunk() != cfhL.getLastChunk() ) {
-                                for (i = cfhL.getLastReceivedChunk(); i<=cfhL.getLastChunk(); i++) {
+                                downFileRS.add(server);
+                                for (i = chunksPerServer[2 * srvIdx]; i <= chunksPerServer[2 * srvIdx + 1]; i++) {
                                     chunksLeft.add(i);
                                 }
-
-                                reqFile.removeServer(reqFileRS.get(cfhIdx));
                             }
-                        } catch (InterruptedException e) {
-                            FTPService.logErr(e.getMessage());
-                            FTPService.logDebug(e);
-                            reqFile.removeServer(reqFileRS.get(cfhIdx));
-                        }
-                        receivedChunks += cfhL.getLastReceivedChunk()-cfhL.getFirstChunk()+1;
-                    }
 
-                    chunks = new Integer[chunksLeft.size()];
-                    chunks = chunksLeft.toArray(chunks);
-
-                    rfServerListIterator =  reqFile.getServerList().listIterator();
-
-                    while (rfServerListIterator.hasNext()){
-                        rfServerListIterator.next();
-                        try {
-                            s.receive(packet);
-
-                            response = FTPService.stringFromDatagramPacket(packet);
-
-                            FTPService.logInfo(String.format("< [%s:%s] %s ",
-                                    packet.getAddress().getHostAddress(),
-                                    packet.getPort(), response));
-
-                            if (FTPService.responseFromString(response) != FTPService.Response.OK) {
-                                FTPService.logWarn(String.format("Unexpected GET response from %s:%s",
-                                        packet.getAddress().getHostAddress(),
-                                        packet.getPort()));
-                            }
                         } catch (IOException e) {
                             FTPService.logErr(e.getMessage());
                             FTPService.logDebug(e);
+                            downFileRS.add(server);
+                            for (i = chunksPerServer[2 * srvIdx]; i <= chunksPerServer[2 * srvIdx + 1]; i++) {
+                                chunksLeft.add(i);
+                            }
                         }
+                    } else {
+                        downFileRS.add(server);
                     }
                 }
+
+
+
+                for(RemoteServer server: upFileRS) {
+                    int srvIdx = upFileRS.indexOf(server);
+
+                    ClientFileHandler cfh = new ClientFileHandler(
+                            0,
+                            server,
+                            serverTcpPorts.get(srvIdx),
+                            server.hashCode(),
+                            partFile,
+                            chunksPerServer[2 * srvIdx], chunksPerServer[2 * srvIdx + 1]);
+                    Thread cfhT = new Thread(cfh);
+                    FTPService.logWarn(String.format("Running thread %s for %s", cfhT.getId(), server.getName()));
+                    cfhT.start();
+                    cfhList.add(cfh);
+                    cfhThreadList.add(cfhT);
+                }
+
+                for (Thread cfhT : cfhThreadList) {
+                    int cfhIdx = cfhThreadList.indexOf(cfhT);
+                    ClientFileHandler cfhL = cfhList.get(cfhIdx);
+                    RemoteServer server = upFileRS.get(cfhIdx);
+                    try {
+                        cfhT.join();
+                        if (cfhL.getLastReceivedChunk() != cfhL.getLastChunk() ) {
+                            for (i = cfhL.getLastReceivedChunk(); i<=cfhL.getLastChunk(); i++) {
+                                chunksLeft.add(i);
+                            }
+                            downFileRS.add(server);
+                        }
+                    } catch (InterruptedException e) {
+                        FTPService.logErr(e.getMessage());
+                        FTPService.logDebug(e);
+                        downFileRS.add(server);
+                    }
+                    receivedChunks += cfhL.getLastReceivedChunk()-cfhL.getFirstChunk()+1;
+                }
+
+                chunks = new Integer[chunksLeft.size()];
+                chunks = chunksLeft.toArray(chunks);
+
+                for (RemoteServer server: downFileRS) {
+                    upFileRS.remove(server);
+                    fileRS.remove(server);
+                }
+
+                for(i = 0; i<fileRS.size(); i++) {
+                    try {
+                        s.receive(packet);
+
+                        response = FTPService.stringFromDatagramPacket(packet);
+
+                        FTPService.logInfo(String.format("< [%s:%s] %s ",
+                                packet.getAddress().getHostAddress(),
+                                packet.getPort(), response));
+
+                        if (FTPService.responseFromString(response) != FTPService.Response.OK) {
+                            FTPService.logWarn(String.format("Unexpected GET response from %s:%s",
+                                    packet.getAddress().getHostAddress(),
+                                    packet.getPort()));
+                        }
+                    } catch (IOException e) {
+                        FTPService.logErr(e.getMessage());
+                        FTPService.logDebug(e);
+                    }
+                }
+            }
 
                 /*file = Files.createFile(Paths.get(reqFile.getFileName())).toFile();
                 FileOutputStream fOut = new FileOutputStream(file);
