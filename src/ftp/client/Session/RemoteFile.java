@@ -53,10 +53,8 @@ public class RemoteFile {
         }
     }
 
-    public void removeServer(RemoteServer rs) {
-        if (this.serverList.contains(rs)) {
-            this.serverList.remove(rs);
-        }
+    public boolean removeServer(RemoteServer rs) {
+        return this.serverList.remove(rs);
     }
 
     public ArrayList<RemoteServer> getServerList() {
