@@ -449,7 +449,7 @@ public class UDPFTPClient {
         ArrayList<Thread> clhList = new ArrayList<Thread>();
 
         ClientMonitor.resetList();
-
+        ArrayList<Integer> serverTcpPorts = new ArrayList<Integer>();
         Iterator<RemoteServer> serverListIterator =  this.serverList.listIterator();
         while ( serverListIterator.hasNext() ) {
             RemoteServer server = serverListIterator.next();
@@ -469,13 +469,7 @@ public class UDPFTPClient {
                         packet.getPort(), response));
 
                 if (FTPService.responseFromString(response) == FTPService.Response.PORT) {
-                    Thread clhT = new Thread(new ClientListHandler(0,
-                            server,
-                            FTPService.portFromResponse(response),
-                            server.hashCode()));
-                    FTPService.logWarn(String.format("Running thread %s for %s", clhT.getId(), server.getName()));
-                    clhT.start();
-                    clhList.add(clhT);
+                    serverTcpPorts.add(FTPService.portFromResponse(response));
                 } else {
                     FTPService.logWarn(String.format("Unexpected PORT response from %s", server.getName()));
                     FTPService.logWarn(String.format("Deleting %s server form available servers", server.getName()));
@@ -486,6 +480,18 @@ public class UDPFTPClient {
                 FTPService.logErr(e.getMessage());
                 FTPService.logDebug(e);
             }
+        }
+
+        serverListIterator =  this.serverList.listIterator();
+        while ( serverListIterator.hasNext() ) {
+            RemoteServer server = serverListIterator.next();
+            Thread clhT = new Thread(new ClientListHandler(0,
+                    server,
+                    serverTcpPorts.get(this.serverList.indexOf(server)),
+                    server.hashCode()));
+            FTPService.logWarn(String.format("Running thread %s for %s", clhT.getId(), server.getName()));
+            clhT.start();
+            clhList.add(clhT);
         }
 
         for (Thread clh : clhList) {
