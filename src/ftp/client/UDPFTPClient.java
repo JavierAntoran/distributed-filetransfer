@@ -259,7 +259,6 @@ public class UDPFTPClient {
         ArrayList<RemoteServer> downFileRS;
 
         String reqFilename;
-        File file;
 
         int nChunks;
         Integer[] chunks;
@@ -280,6 +279,14 @@ public class UDPFTPClient {
         // Check file exists in servers
         if ( this.fileList.containsKey(reqFilename) ) {
 
+            if (Files.exists(Paths.get(reqFilename))) {
+                System.out.print(String.format("The file \"%s\" exists. Replace it? Y/N: ",reqFilename ));
+                String answer = this.input.nextLine();
+                if (answer.equalsIgnoreCase("N")) {
+                    return;
+                }
+            }
+
             // Get RemoteFile instance
             RemoteFile reqFile = fileList.get(reqFilename);
 
@@ -289,6 +296,9 @@ public class UDPFTPClient {
             for(i = 0; i < nChunks; chunks[i] = i+1, i++);
 
             int[] chunksPerServer;
+
+            Files.deleteIfExists(Paths.get(reqFilename));
+            Files.deleteIfExists(Paths.get(reqFilename+".part"));
 
             File partFile = Files.createFile(Paths.get(reqFilename+".part")).toFile();
 
@@ -393,6 +403,7 @@ public class UDPFTPClient {
                         cfhT.join();
                         if (cfhL.getLastReceivedChunk() != cfhL.getLastChunk() ) {
                             for (i = cfhL.getLastReceivedChunk(); i<=cfhL.getLastChunk(); i++) {
+                                System.out.println("ChunkLeft: " + i);
                                 chunksLeft.add(i);
                             }
                             downFileRS.add(server);
@@ -435,23 +446,13 @@ public class UDPFTPClient {
                 }
             }
 
-                /*file = Files.createFile(Paths.get(reqFile.getFileName())).toFile();
-                FileOutputStream fOut = new FileOutputStream(file);
-                FileInputStream fIn;
-                byte[] data = new byte[FTPService.CHUNKSIZE];
-                int dataLength;
-                File part;
-                for (int i = 0;  i < this.serverList.size(); i++) {
-                    part = Paths.get(reqFilename + partsPerServer.get(i)).toFile();
-                    fIn = new FileInputStream(part);
-                    while ( (dataLength = fIn.read(data)) != -1) {
-                        fOut.write(data,0,dataLength);
-                    }
-                    fIn.close();
-                    part.delete();
-                }
-                fOut.close();*/
-
+            if (partFile.length() == reqFile.getFileSize()) {
+                Files.move(Paths.get(reqFilename+".part"), Paths.get(reqFilename));
+                FTPService.logInfo("Transfer Complete");
+            } else {
+                FTPService.logInfo("An error ocurred during transfer. See debug details for more information");
+                Files.deleteIfExists(Paths.get(reqFilename+".part"));
+            }
 
         } else {
             System.out.println(String.format("File %s not found", reqFilename));
@@ -462,10 +463,11 @@ public class UDPFTPClient {
     private void helloAction() {
 
         parseServerInfo(this.serverFile);
-
-        for (RemoteServer server: this.serverList) {
+        Iterator<RemoteServer> it = this.serverList.listIterator();
+        while (it.hasNext()) {
+            RemoteServer server = it.next();
             if (!sendHello(server) ) {
-                this.serverList.remove(server);
+                it.remove();
             }
         }
 
