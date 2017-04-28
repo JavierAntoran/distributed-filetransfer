@@ -94,6 +94,7 @@ public class ClientFileHandler extends ClientTCPHandler{
         int nChunks = this.lastChunk - this.firstChunk + 1;
         long bw;
         long avg_bw = 0;
+        int bwDivider = 0;
 
         try {
 
@@ -106,6 +107,7 @@ public class ClientFileHandler extends ClientTCPHandler{
 
                 if (bw != -1) {
                     avg_bw += bw;
+                    bwDivider++;
                 }
 
                 this.stream.close();
@@ -115,7 +117,8 @@ public class ClientFileHandler extends ClientTCPHandler{
             fOut.close();
 
             if (FTPService.UPDATE_BW_ON_GET && (avg_bw != 0)){
-                rs.setBw(avg_bw /= (nChunks - 1));
+                System.out.println("bw updated to: " + (avg_bw / bwDivider));
+                rs.setBw(avg_bw / bwDivider);
             }
 
 

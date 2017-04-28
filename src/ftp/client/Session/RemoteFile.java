@@ -109,7 +109,7 @@ public class RemoteFile {
         int minTimeIndex = 0;
         boolean unevenChunk = false;
         int unevenIndex = servers.size() + 1;
-        int nextChunk = (int) FTPService.getNChunks(fileSize, FTPService.CHUNKSIZE);
+        int nextChunkIndex = nChunks;
 
         int[] out = new int[2 * servers.size()]; //default initialized to 0
 
@@ -156,7 +156,7 @@ public class RemoteFile {
             unevenIndex = minTimeIndex;
             out[2 * unevenIndex + 1] = chunks[chunks.length - 1];
             out[2 * unevenIndex] = chunks[chunks.length - partsPerServer[unevenIndex]];
-            nextChunk -= partsPerServer[unevenIndex];
+            nextChunkIndex -= partsPerServer[unevenIndex];
         }
 
 
@@ -168,10 +168,10 @@ public class RemoteFile {
                 out[2 * i + 1] = 0;
                 out[2 * i] = 0;
             } else {
-                out[2 * i + 1] = nextChunk;
+                out[2 * i + 1] = chunks[nextChunkIndex];
                 out[2 * i] = out[2 * i + 1] - partsPerServer[i] + 1;
             }
-            nextChunk -= partsPerServer[i];
+            nextChunkIndex -= partsPerServer[i];
         }
 
         return out;
