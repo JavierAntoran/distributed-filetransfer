@@ -1,5 +1,6 @@
 package ftp.client.tcp;
 
+import ftp.FTPService;
 import ftp.client.Session.RemoteServer;
 
 import java.io.IOException;
@@ -40,8 +41,9 @@ abstract public class ClientTCPHandler implements Runnable{
 
             this.stream = new Socket(this.rs.getAddr(), this.rPort, null, lPort);
 
-        } catch (IOException iox) {
-            System.out.println(iox);
+        } catch (IOException e) {
+            FTPService.logErr(e.getMessage());
+            FTPService.logDebug(e);
         }
 
     }
