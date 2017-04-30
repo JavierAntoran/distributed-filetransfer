@@ -481,6 +481,7 @@ public class UDPFTPClient {
 
         ClientMonitor.resetList();
         ArrayList<Integer> serverTcpPorts = new ArrayList<Integer>();
+        Iterator<Integer> serverTcpPortsIterator;
         Iterator<RemoteServer> serverListIterator =  this.serverList.listIterator();
         while ( serverListIterator.hasNext() ) {
             RemoteServer server = serverListIterator.next();
@@ -513,12 +514,13 @@ public class UDPFTPClient {
             }
         }
 
-        serverListIterator =  this.serverList.listIterator();
-        while ( serverListIterator.hasNext() ) {
-            RemoteServer server = serverListIterator.next();
+        serverTcpPortsIterator =  serverTcpPorts.listIterator();
+        while ( serverTcpPortsIterator.hasNext() ) {
+            Integer tcpPort = serverTcpPortsIterator.next();
+            RemoteServer server = this.serverList.get(serverTcpPorts.indexOf(tcpPort));
             Thread clhT = new Thread(new ClientListHandler(0,
                     server,
-                    serverTcpPorts.get(this.serverList.indexOf(server)),
+                    tcpPort,
                     server.hashCode()));
             FTPService.logWarn(String.format("Running thread %s for %s", clhT.getId(), server.getName()));
             clhT.start();
