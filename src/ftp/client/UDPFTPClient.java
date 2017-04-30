@@ -564,43 +564,6 @@ public class UDPFTPClient {
     }
 
     /**
-     * function is deprecated, will be deleted
-     * @param fileSize
-     * @return
-     */
-    private String[] getInterval(int fileSize) {
-
-        int i;
-        String interval[] = new String[serverList.size()];
-        int totalBW = 0;
-        int relativeBW = 0;
-        int chunkOffset = 0;
-        long nChunks = FTPService.getNChunks(fileSize, FTPService.CHUNKSIZE);
-
-        for (i = 0; i < serverList.size(); i++) {
-            totalBW += serverList.get(i).getBw();
-        }
-
-        for (i = 0; i < serverList.size(); i++) {
-            relativeBW = Math.round(nChunks * serverList.get(i).getBw() / totalBW);
-            interval[i] = ".part" + (chunkOffset + 1) + "-" + (relativeBW + chunkOffset);
-            chunkOffset += relativeBW;
-        }
-
-        if (chunkOffset - nChunks > 0) {
-            interval[serverList.size() - 1] = ".part" + (chunkOffset - relativeBW + 1)
-                    + "-" + (chunkOffset - 1);
-        } else if (chunkOffset - nChunks > 0) {
-            interval[serverList.size() - 1] = ".part" + (chunkOffset - relativeBW + 1)
-                    + "-" + (chunkOffset + 1);
-        }
-
-        return interval;
-
-
-    }
-
-    /**
      * Executes QUIT call to remote servers
      */
     private void quitAction() {
