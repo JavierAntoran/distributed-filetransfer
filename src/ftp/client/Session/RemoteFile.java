@@ -109,7 +109,7 @@ public class RemoteFile {
         int minTimeIndex = 0;
         boolean unevenChunk = false;
         int unevenIndex = servers.size() + 1;
-        int nextChunkIndex = nChunks;
+        int nextChunkIndex = nChunks - 1;
 
         int[] out = new int[2 * servers.size()]; //default initialized to 0
 
