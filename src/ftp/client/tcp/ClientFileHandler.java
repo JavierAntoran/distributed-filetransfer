@@ -4,9 +4,11 @@ import ftp.FTPService;
 import ftp.client.Session.RemoteServer;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import static java.nio.file.StandardOpenOption.WRITE;
 
 /**
  *  Alberto Mur & Javier Antoran.
@@ -20,7 +22,7 @@ public class ClientFileHandler extends ClientTCPHandler{
     private int lastChunk;
     private int lastReceivedChunk;
 
-    private FileOutputStream fOut;
+    private FileChannel fc;
 
 
     public ClientFileHandler(int lPort, RemoteServer rs, int rPort, int id, File f, int firstChunk, int lastChunk) {
@@ -32,44 +34,22 @@ public class ClientFileHandler extends ClientTCPHandler{
 
     }
 
-    private long bwCheck() throws IOException {
-
-        byte buff[] = new byte[FTPService.CHUNKSIZE];
-        InputStream dataStream = stream.getInputStream();
-        long dataLength;
-        long dataRead = 0;
-
-        long startTime = System.nanoTime();
-
-        while ((dataLength = dataStream.read(buff)) != -1) {
-            dataRead += dataLength;
-        }
-
-
-
-        long endTime = System.nanoTime();
-
-        long timeLapsed = endTime - startTime;
-        long bw = (dataRead * 1000000000 / timeLapsed);
-
-        System.out.println(this.rHost.getHostName() +
-                ": bandwidth updated to: " +  ((float) bw / 1000000));
-
-        return 0;
-    }
-
     private long getChunk(int nChunk) throws IOException {
 
         byte buff[] = new byte[FTPService.CHUNKSIZE];
+        ByteBuffer byteBuffer;
         InputStream chunkStream = this.stream.getInputStream();
         int dataLength;
         long dataRead = 0;
         long startTime = System.nanoTime();
 
-        this.fOut.getChannel().position((nChunk-1)*FTPService.CHUNKSIZE);
+        this.fc.position((nChunk-1)*FTPService.CHUNKSIZE);
 
         while ((dataLength = chunkStream.read(buff)) != -1) {
-            this.fOut.write(buff, 0, dataLength);
+            byteBuffer = ByteBuffer.wrap(buff,0,dataLength );
+            while(byteBuffer.hasRemaining()) {
+                this.fc.write(byteBuffer);
+            }
             dataRead += dataLength;
         }
         long endTime = System.nanoTime();
@@ -98,7 +78,9 @@ public class ClientFileHandler extends ClientTCPHandler{
 
         try {
 
-            this.fOut = new FileOutputStream(f);
+
+
+            fc = FileChannel.open(f.toPath(), WRITE);
 
             for (i = 0; i < nChunks; i++) {
 
@@ -111,14 +93,16 @@ public class ClientFileHandler extends ClientTCPHandler{
                 }
 
                 this.stream.close();
-                this.fOut.flush();
                 this.lastReceivedChunk = this.firstChunk + i;
             }
-            this.fOut.close();
 
             if (FTPService.UPDATE_BW_ON_GET && (avg_bw != 0)){
-                System.out.println("bw for " + this.rs.getName() + " was: "
-                        + this.rs.getBw() + " now updated to: " + (avg_bw / bwDivider));
+                FTPService.logDebug(
+                        String.format("%s bandwidth updated from %f to: %f",
+                                this.rs.getName(),
+                                ((float)this.rs.getBw()/1e6),
+                                ((float) avg_bw / (bwDivider*1e6)))
+                );
                 this.rs.setBw(avg_bw / bwDivider);
             }
 
