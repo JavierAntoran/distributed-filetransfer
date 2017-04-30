@@ -238,7 +238,7 @@ public class UDPFTPClient {
                     break;
 
                 default:
-                    System.out.println("Unknown command, try: " + FTPService.Command.values().toString());
+                    System.out.println("Unknown command, try: HELLO, LIST, GET, QUIT" );
                     break;
             }
         } catch (IOException e) {
@@ -272,7 +272,7 @@ public class UDPFTPClient {
         reqFilename = FTPService.requestedFile(command);
 
         // Refresh file list
-        if (this.fileList.size() == 0) {
+        if (this.fileList == null || this.fileList.size() == 0) {
             this.listAction();
         }
 
@@ -288,7 +288,7 @@ public class UDPFTPClient {
             }
 
             // Get RemoteFile instance
-            RemoteFile reqFile = fileList.get(reqFilename);
+            RemoteFile reqFile = this.fileList.get(reqFilename);
 
             nChunks = FTPService.getNChunks(reqFile.getFileSize(), FTPService.CHUNKSIZE);
 
