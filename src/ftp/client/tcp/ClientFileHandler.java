@@ -111,14 +111,15 @@ public class ClientFileHandler extends ClientTCPHandler{
                 }
 
                 this.stream.close();
-                fOut.flush();
+                this.fOut.flush();
                 this.lastReceivedChunk = this.firstChunk + i;
             }
-            fOut.close();
+            this.fOut.close();
 
             if (FTPService.UPDATE_BW_ON_GET && (avg_bw != 0)){
-                System.out.println("bw updated to: " + (avg_bw / bwDivider));
-                rs.setBw(avg_bw / bwDivider);
+                System.out.println("bw for " + this.rs.getName() + " was: "
+                        + this.rs.getBw() + " now updated to: " + (avg_bw / bwDivider));
+                this.rs.setBw(avg_bw / bwDivider);
             }
 
 
