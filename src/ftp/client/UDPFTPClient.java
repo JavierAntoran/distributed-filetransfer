@@ -389,7 +389,7 @@ public class UDPFTPClient {
                             partFile,
                             chunksPerServer[2 * srvIdx], chunksPerServer[2 * srvIdx + 1]);
                     Thread cfhT = new Thread(cfh);
-                    FTPService.logWarn(String.format("Running thread %s for %s", cfhT.getId(), server.getName()));
+                    FTPService.logDebug(String.format("Running thread %s for %s", cfhT.getId(), server.getName()));
                     cfhT.start();
                     cfhList.add(cfh);
                     cfhThreadList.add(cfhT);
@@ -522,7 +522,7 @@ public class UDPFTPClient {
                     server,
                     tcpPort,
                     server.hashCode()));
-            FTPService.logWarn(String.format("Running thread %s for %s", clhT.getId(), server.getName()));
+            FTPService.logDebug(String.format("Running thread %s for %s", clhT.getId(), server.getName()));
             clhT.start();
             clhList.add(clhT);
         }
