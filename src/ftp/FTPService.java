@@ -14,18 +14,20 @@ import java.util.regex.Matcher;
 
 public class FTPService {
 
+    public static final int LOG_ALL = 15;
     public static final int LOG_DEBUG = 8;
     public static final int LOG_ERR = 4;
     public static final int LOG_WARN = 2;
     public static final int LOG_INFO = 1;
 
+
+    public static final int LOG_LEVEL = 0;
     public static final int SIZEMAX = 255; // Maximum size of UDP datagram
     public static final int SERVERPORT = 5000; // default ftp.server port
     public static final int TIMEOUT = 5000; //timeout en ms
     public static final int CHUNKSIZE = 1024 * 1024; //bytes por bloque
     public static final int MAXSERVERTHREADS = 20; //max concurrent tcp handlers
     public static final     boolean UPDATE_BW_ON_GET = true;
-
 
     static public enum Command {HELLO, LIST, GET, QUIT, ERROR, CHECKBW};
     static public enum Response {WCOME, OK, PORT, SERVERROR, BYE, UNKNOWN};
@@ -150,26 +152,37 @@ public class FTPService {
     }
 
     public static void logDebug(String msg) {
-        FTPService.debug(FTPService.LOG_DEBUG, msg);
+        if ((LOG_LEVEL & LOG_DEBUG) > 1){
+            FTPService.debug(FTPService.LOG_DEBUG, "[DEBUG]" + msg);
+        }
     }
 
     public static void logDebug(Exception e) {
-        e.printStackTrace();
+
+        if ((LOG_LEVEL & LOG_DEBUG) == LOG_DEBUG){
+            e.printStackTrace();
+        }
     }
 
     public static void logWarn(String msg) {
-        FTPService.debug(FTPService.LOG_WARN, msg);
+        if ((LOG_LEVEL & LOG_WARN) == LOG_WARN) {
+            FTPService.debug(FTPService.LOG_WARN, "[WARN] " + msg);
+        }
     }
     public static void logErr(String msg) {
-        FTPService.debug(FTPService.LOG_ERR, msg);
+        if ((LOG_LEVEL & LOG_ERR) == LOG_ERR) {
+            FTPService.debug(FTPService.LOG_ERR, "[ERR] " + msg);
+        }
     }
     public static void logInfo(String msg) {
-        FTPService.debug(FTPService.LOG_INFO, msg);
+        if ((LOG_LEVEL & LOG_INFO) == LOG_INFO) {
+            FTPService.debug(FTPService.LOG_INFO, "[INFO] " + msg);
+        }
     }
 
     private static void debug(int logLevel, String msg) {
         String date = ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        System.out.printf("[DEBUG] %s: %s\n", date, msg);
+        System.out.printf("%s: %s\n", date, msg);
     }
 
 }
