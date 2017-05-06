@@ -161,7 +161,7 @@ public class MultiFTPClient {
      */
     private boolean sendHello(RemoteServer rs) {
         String response;
-        boolean isUp = true;
+        boolean isUp = false;
         try {
 
             FTPService.sendUDPmessage(s, FTPService.Command.HELLO.toString(),
@@ -177,19 +177,17 @@ public class MultiFTPClient {
 
             if (FTPService.responseFromString(response) != FTPService.Response.WCOME) {
                 FTPService.logWarn(String.format("Unexpected HELLO response from %s", rs.getName()));
-                return false;
+            } else {
+                isUp = true;
             }
 
         } catch (SocketTimeoutException e) {
             FTPService.logWarn(String.format("Server %s appears to be down or not responding",  rs.getName()));
-            isUp = false;
             FTPService.logErr(e.getMessage());
             FTPService.logDebug(e);
-            return false;
         } catch (IOException e) {
             FTPService.logErr(e.getMessage());
             FTPService.logDebug(e);
-            return false;
         }
         return isUp;
     }
