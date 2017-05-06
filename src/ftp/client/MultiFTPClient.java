@@ -317,14 +317,6 @@ public class MultiFTPClient {
                         reqFile.getFileSize(),
                         chunks);
 
-                for (i=0; i<chunksPerServer.length; i=i+2){
-                    FTPService.logDebug(String.format(
-                            "Parts for server: %d-%d",
-                            chunksPerServer[i],
-                            chunksPerServer[i+1])
-                    );
-                }
-
                 ArrayList<Integer> chunksLeft = new ArrayList<Integer>();
 
                 downFileRS = new ArrayList<RemoteServer>();
@@ -406,7 +398,6 @@ public class MultiFTPClient {
                         cfhT.join();
                         if (cfhL.getLastReceivedChunk() != cfhL.getLastChunk() ) {
                             for (i = cfhL.getLastReceivedChunk(); i<=cfhL.getLastChunk(); i++) {
-                                System.out.println("ChunkLeft: " + i);
                                 chunksLeft.add(i);
                             }
                             downFileRS.add(server);
