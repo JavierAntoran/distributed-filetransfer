@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  */
 public class UDPFTPClient {
 
-    static final String SERVERFILE = "ftp_files/servers.txt";
+    static final String SERVERFILE = "servers.txt";
 
     Scanner input = new Scanner(System.in);
 
@@ -39,6 +39,7 @@ public class UDPFTPClient {
 
         switch (args.length) {
             case 0:
+                System.out.println(String.format("Using %s as server list file", SERVERFILE));
                 new UDPFTPClient(0, SERVERFILE);
                 break;
             case 1:
