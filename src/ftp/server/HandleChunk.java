@@ -48,12 +48,8 @@ public class HandleChunk extends HandleFTPConnection {
 
 
     private void sendChunk(int nChunk) throws Exception {
-
         int chunkSize = getChunk(nChunk, FTPService.CHUNKSIZE);
-        System.out.println(chunkSize);
         this.out.write(this.chunkBytes, 0, chunkSize);
-        System.out.println("file: " + this.f.getPath() + " chunk sent: " + nChunk);
-
     }
 
     private void sendFile() throws Exception{
@@ -62,7 +58,6 @@ public class HandleChunk extends HandleFTPConnection {
         while ((dataLength = this.fis.read(buffer)) > 0) {
             this.out.write(buffer, 0, dataLength);
         }
-        System.out.println("file: " + f.getPath() + "sent");
     }
 
     public void run() {
