@@ -264,6 +264,8 @@ public class MultiFTPClient {
         int i;
         int receivedChunks = 0;
 
+        long startTime, elapsedTime;
+
         // Retrieve server file list
         HashMap<String, RemoteFile> fileList = ClientMonitor.getMergedList();
 
@@ -285,6 +287,8 @@ public class MultiFTPClient {
                     return;
                 }
             }
+
+            startTime = System.nanoTime();
 
             // Get RemoteFile instance
             RemoteFile reqFile = this.fileList.get(reqFilename);
@@ -447,7 +451,14 @@ public class MultiFTPClient {
 
             if (partFile.length() == reqFile.getFileSize()) {
                 Files.move(Paths.get(reqFilename+".part"), Paths.get(reqFilename));
-                FTPService.logInfo("Transfer Complete");
+                System.out.println(
+                        String.format("Transfer complete. Received %d bytes",
+                                Paths.get(reqFilename).toFile().length()));
+
+                elapsedTime = System.nanoTime() - startTime;
+
+                FTPService.logInfo(String.format("Elapsed time: %f seconds", elapsedTime*1e-9));
+
             } else {
                 FTPService.logInfo("An error ocurred during transfer. See debug details for more information");
                 Files.deleteIfExists(Paths.get(reqFilename+".part"));
