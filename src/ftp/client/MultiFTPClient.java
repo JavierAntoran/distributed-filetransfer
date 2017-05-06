@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 /**
  *  Alberto Mur & Javier Antoran.
  */
-public class UDPFTPClient {
+public class MultiFTPClient {
 
     static final String SERVERFILE = "servers.txt";
 
@@ -40,13 +40,13 @@ public class UDPFTPClient {
         switch (args.length) {
             case 0:
                 System.out.println(String.format("Using %s as server list file", SERVERFILE));
-                new UDPFTPClient(0, SERVERFILE);
+                new MultiFTPClient(0, SERVERFILE);
                 break;
             case 1:
-                new UDPFTPClient(0, args[0]);
+                new MultiFTPClient(0, args[0]);
                 break;
             case 2:
-                new UDPFTPClient(Integer.parseInt(args[1]), args[0]);
+                new MultiFTPClient(Integer.parseInt(args[1]), args[0]);
                 break;
             default:
                 System.out.println("invalid number of arguments");
@@ -55,7 +55,7 @@ public class UDPFTPClient {
 
     }
 
-    public UDPFTPClient(int lport, String serverFilename) {
+    public MultiFTPClient(int lport, String serverFilename) {
 
         String sRX = ""; //mensaje que recibimos
         String sTX; //mensaje que enviamos
