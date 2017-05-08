@@ -130,7 +130,7 @@ public class MultiFTPClient {
                 if (m.find()) {
                     serverList.add(new RemoteServer(InetAddress.getByName(m.group(1)),
                             Integer.parseInt(m.group(2)),
-                            Integer.parseInt(m.group(3))));
+                            Integer.parseInt(m.group(3)) * 131072));
                 } else {
                     System.out.printf("Bad format line %d: %s\n", serverList.size(), line);
                 }
