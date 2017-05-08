@@ -36,8 +36,7 @@ public class HandleChunk extends HandleFTPConnection {
 
         this.chunkBytes = new byte[chunkSize];
         int dataread;
-        System.out.printf("Reading chunk %d\n", nChunk);
-        //TODO: check if amount of bytes read is correct for last chunk
+
         this.fis.getChannel().position((nChunk-1)*FTPService.CHUNKSIZE);
         if ( (dataread = this.fis.read(chunkBytes) ) <= 0) {
             System.out.println("error leyendo chunkBytes: " + nChunk);
