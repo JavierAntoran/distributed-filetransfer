@@ -141,12 +141,18 @@ public class MultiFTPClient {
                 System.exit(1);
             }
 
-        } catch (UnknownHostException uhx) {
+        } catch (UnknownHostException e) {
             System.out.println("Error parsing server name: " + serverList.size());
-            System.out.println(uhx.getStackTrace().toString());
-        } catch (IOException iox) {
+            FTPService.logErr(e.getMessage());
+            FTPService.logDebug(e);
+        } catch (IOException e) {
             System.out.println("Error reading server data file");
-            System.out.println(iox.getStackTrace().toString());
+            FTPService.logErr(e.getMessage());
+            FTPService.logDebug(e);
+        }
+        for  (RemoteServer server: this.serverList) {
+            System.out.println("Server " + server.toString() +
+                    " BW: " + server.getBw());
         }
 
     }
@@ -262,7 +268,7 @@ public class MultiFTPClient {
         int nChunks;
         Integer[] chunks;
         int i;
-        int receivedChunks = 0;
+        int receivedChunks;
 
         long startTime, elapsedTime;
 
@@ -288,6 +294,7 @@ public class MultiFTPClient {
                 }
             }
 
+            receivedChunks = 0;
             startTime = System.nanoTime();
 
             // Get RemoteFile instance
@@ -296,14 +303,14 @@ public class MultiFTPClient {
             nChunks = FTPService.getNChunks(reqFile.getFileSize(), FTPService.CHUNKSIZE);
 
             chunks = new Integer[nChunks];
-            for(i = 0; i < nChunks; chunks[i] = i+1, i++);
+            for (i = 0; i < nChunks; chunks[i] = i + 1, i++) ;
 
             int[] chunksPerServer;
 
             Files.deleteIfExists(Paths.get(reqFilename));
-            Files.deleteIfExists(Paths.get(reqFilename+".part"));
+            Files.deleteIfExists(Paths.get(reqFilename + ".part"));
 
-            File partFile = Files.createFile(Paths.get(reqFilename+".part")).toFile();
+            File partFile = Files.createFile(Paths.get(reqFilename + ".part")).toFile();
 
             fileRS = reqFile.getServerList();
 
@@ -322,11 +329,11 @@ public class MultiFTPClient {
                 downFileRS = new ArrayList<RemoteServer>();
                 upFileRS = new ArrayList<RemoteServer>();
 
-                for(RemoteServer server: fileRS) {
+                for (RemoteServer server : fileRS) {
 
                     int srvIdx = fileRS.indexOf(server);
 
-                    if (chunksPerServer[2*srvIdx] != 0 &&  chunksPerServer[2*srvIdx + 1] != 0) {
+                    if (chunksPerServer[2 * srvIdx] != 0 && chunksPerServer[2 * srvIdx + 1] != 0) {
 
                         String serverFilePart = reqFilename +
                                 String.format(".part%d-%d", chunksPerServer[2 * srvIdx], chunksPerServer[2 * srvIdx + 1]);
@@ -372,10 +379,8 @@ public class MultiFTPClient {
                 }
 
 
-
-                for(RemoteServer server: upFileRS) {
+                for (RemoteServer server: upFileRS) {
                     int srvIdx = upFileRS.indexOf(server);
-
                     ClientFileHandler cfh = new ClientFileHandler(
                             0,
                             server,
@@ -396,8 +401,8 @@ public class MultiFTPClient {
                     RemoteServer server = upFileRS.get(cfhIdx);
                     try {
                         cfhT.join();
-                        if (cfhL.getLastReceivedChunk() != cfhL.getLastChunk() ) {
-                            for (i = cfhL.getLastReceivedChunk(); i<=cfhL.getLastChunk(); i++) {
+                        if (cfhL.getLastReceivedChunk() != cfhL.getLastChunk()) {
+                            for (i = cfhL.getLastReceivedChunk(); i <= cfhL.getLastChunk(); i++) {
                                 chunksLeft.add(i);
                             }
                             downFileRS.add(server);
@@ -405,20 +410,25 @@ public class MultiFTPClient {
                     } catch (InterruptedException e) {
                         FTPService.logErr(e.getMessage());
                         FTPService.logDebug(e);
-                        downFileRS.add(server);
+                        if (cfhL.getLastReceivedChunk() != cfhL.getLastChunk()) {
+                            for (i = cfhL.getLastReceivedChunk(); i <= cfhL.getLastChunk(); i++) {
+                                chunksLeft.add(i);
+                            }
+                            downFileRS.add(server);
+                        }
                     }
-                    receivedChunks += cfhL.getLastReceivedChunk()-cfhL.getFirstChunk()+1;
+                    receivedChunks += cfhL.getLastReceivedChunk() - cfhL.getFirstChunk() + 1;
                 }
 
                 chunks = new Integer[chunksLeft.size()];
                 chunks = chunksLeft.toArray(chunks);
 
-                for (RemoteServer server: downFileRS) {
+                for (RemoteServer server : downFileRS) {
                     upFileRS.remove(server);
                     fileRS.remove(server);
                 }
 
-                for(i = 0; i<fileRS.size(); i++) {
+                for (i = 0; i < fileRS.size(); i++) {
                     try {
                         s.receive(packet);
 
@@ -441,18 +451,17 @@ public class MultiFTPClient {
             }
 
             if (partFile.length() == reqFile.getFileSize()) {
-                Files.move(Paths.get(reqFilename+".part"), Paths.get(reqFilename));
+                Files.move(Paths.get(reqFilename + ".part"), Paths.get(reqFilename));
                 System.out.println(
                         String.format("Transfer complete. Received %d bytes",
                                 Paths.get(reqFilename).toFile().length()));
 
                 elapsedTime = System.nanoTime() - startTime;
 
-                FTPService.logInfo(String.format("Elapsed time: %f seconds", elapsedTime*1e-9));
-
+                FTPService.logInfo(String.format("Elapsed time: %f seconds", elapsedTime * 1e-9));
             } else {
                 FTPService.logInfo("An error ocurred during transfer. See debug details for more information");
-                Files.deleteIfExists(Paths.get(reqFilename+".part"));
+                Files.deleteIfExists(Paths.get(reqFilename + ".part"));
             }
 
         } else {
@@ -584,7 +593,7 @@ public class MultiFTPClient {
 
                 response = FTPService.stringFromDatagramPacket(packet);
 
-                FTPService.logInfo(String.format("< %", FTPService.stringFromDatagramPacket(packet)));
+                FTPService.logInfo(String.format("< %s", FTPService.stringFromDatagramPacket(packet)));
 
                 if (FTPService.responseFromString(response) != FTPService.Response.WCOME) {
                     FTPService.logWarn(String.format("Unexpected QUIT response from %s", server.getName()));
