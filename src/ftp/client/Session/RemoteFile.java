@@ -141,8 +141,9 @@ public class RemoteFile {
             }
 
             // Calc minimal time for efficient chunk distribution
+            minTime = 1000000;
             for (i = 0; i < servers.size(); i++) {
-                serverTime = ((float) partsPerServer[i] * FTPService.CHUNKSIZE + chunkBytes) / servers.get(i).getBw();
+                serverTime = ((float)partsPerServer[i] * FTPService.CHUNKSIZE + chunkBytes) / servers.get(i).getBw();
                 if ( serverTime < minTime ) {
                     minTime = serverTime;
                     minTimeIndex = i;
@@ -150,8 +151,7 @@ public class RemoteFile {
             }
             partsPerServer[ minTimeIndex ]++;
         }
-
-
+        
         if (unevenChunk) {
             unevenIndex = minTimeIndex;
             out[2 * unevenIndex + 1] = chunks[chunks.length - 1];
