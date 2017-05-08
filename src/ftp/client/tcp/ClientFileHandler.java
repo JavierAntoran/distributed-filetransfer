@@ -97,7 +97,7 @@ public class ClientFileHandler extends ClientTCPHandler{
             }
 
             if (FTPService.UPDATE_BW_ON_GET && (avg_bw != 0)){
-                FTPService.logDebug(
+                FTPService.logInfo(
                         String.format("%s bandwidth updated from %f to: %f",
                                 this.rs.getName(),
                                 ((float)this.rs.getBw()/1e6),
