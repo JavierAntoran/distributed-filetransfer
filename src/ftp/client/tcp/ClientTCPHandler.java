@@ -40,6 +40,7 @@ abstract public class ClientTCPHandler implements Runnable{
         try {
 
             this.stream = new Socket(this.rs.getAddr(), this.rPort, null, lPort);
+            this.stream.setSoTimeout(FTPService.TIMEOUT);
 
         } catch (IOException e) {
             FTPService.logErr(e.getMessage());
