@@ -82,17 +82,28 @@ public class UDPFTPClient {
                     System.out.print("ftp> ");
                     command = sc.nextLine();
 
-                    FTPService.sendUDPmessage(dSocket, command, sa);
+                    if (FTPService.commandFromString(command) == FTPService.Command.GET) {
+                        if (Files.exists(Paths.get(FTPService.requestedFile(command)))) {
+                            System.out.print(String.format("The file \"%s\" exists. Replace it? Y/N: ", FTPService.requestedFile(command)));
+                            String answer = this.sc.nextLine();
+                            if (answer.equalsIgnoreCase("N")) {
+                                continue;
+                            }
+                        }
+                    }
 
-                    dgp.setLength(FTPService.SIZEMAX);
-                    dSocket.receive(dgp);
 
-                    response = FTPService.stringFromDatagramPacket(dgp);
                     // Print response
                     // System.out.println ("< " + response);
 
                     switch(FTPService.commandFromString(command)){
                         case LIST:
+                            FTPService.sendUDPmessage(dSocket, command, sa);
+
+                            dgp.setLength(FTPService.SIZEMAX);
+                            dSocket.receive(dgp);
+
+                            response = FTPService.stringFromDatagramPacket(dgp);
                             if ( FTPService.responseFromString(response) == FTPService.Response.PORT ) {
 
                                 listCommand(host,FTPService.portFromResponse(response));
@@ -106,11 +117,17 @@ public class UDPFTPClient {
                             }
                             break;
                         case GET:
-                            if ( FTPService.responseFromString(response) == FTPService.Response.PORT ) {
+                            FTPService.sendUDPmessage(dSocket, command, sa);
 
-                                if ( getCommand(host,
-                                                FTPService.portFromResponse(response),
-                                                FTPService.requestedFile(command)        ) ) {
+                            dgp.setLength(FTPService.SIZEMAX);
+                            dSocket.receive(dgp);
+
+                            response = FTPService.stringFromDatagramPacket(dgp);
+                            if (FTPService.responseFromString(response) == FTPService.Response.PORT) {
+
+                                if (getCommand(host,
+                                        FTPService.portFromResponse(response),
+                                        FTPService.requestedFile(command))) {
 
                                     dSocket.receive(dgp);
                                     System.out.println("< " + FTPService.stringFromDatagramPacket(dgp));
@@ -118,6 +135,7 @@ public class UDPFTPClient {
                             } else {
                                 System.out.println("[ERROR] PORT command not received");
                             }
+
                             break;
                     }
 
@@ -176,13 +194,7 @@ public class UDPFTPClient {
         long startTime, elapsedTime;
 
         try {
-            if (Files.exists(Paths.get(filename))) {
-                System.out.print(String.format("The file \"%s\" exists. Replace it? Y/N: ",filename ));
-                String answer = this.sc.nextLine();
-                if (answer.equalsIgnoreCase("N")) {
-                    return false;
-                }
-            }
+
             Files.deleteIfExists(Paths.get(filename));
 
             startTime = System.nanoTime();
