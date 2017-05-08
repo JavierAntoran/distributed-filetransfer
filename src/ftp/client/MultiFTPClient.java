@@ -128,6 +128,8 @@ public class MultiFTPClient {
 
                 m = pat.matcher(line);
                 if (m.find()) {
+                    // Multiplicar el ancho de banda por 1024*1024 para pasar a bits
+                    // y entre 8 para bytes esto es 131072
                     serverList.add(new RemoteServer(InetAddress.getByName(m.group(1)),
                             Integer.parseInt(m.group(2)),
                             Integer.parseInt(m.group(3)) * 131072));
