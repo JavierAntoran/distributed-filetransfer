@@ -43,7 +43,7 @@ public class ClientFileHandler extends ClientTCPHandler{
         long dataRead = 0;
         long startTime = System.nanoTime();
 
-        this.fc.position((nChunk-1)*FTPService.CHUNKSIZE);
+        this.fc.position(((long)nChunk-1)*FTPService.CHUNKSIZE);
 
         while ((dataLength = chunkStream.read(buff)) != -1) {
             byteBuffer = ByteBuffer.wrap(buff,0,dataLength );
