@@ -382,6 +382,7 @@ public class MultiFTPClient {
 
 
                 for (RemoteServer server: upFileRS) {
+                    int chunkIdx = fileRS.indexOf(server);
                     int srvIdx = upFileRS.indexOf(server);
                     ClientFileHandler cfh = new ClientFileHandler(
                             0,
@@ -389,7 +390,7 @@ public class MultiFTPClient {
                             serverTcpPorts.get(srvIdx),
                             server.hashCode(),
                             partFile,
-                            chunksPerServer[2 * srvIdx], chunksPerServer[2 * srvIdx + 1]);
+                            chunksPerServer[2 * chunkIdx], chunksPerServer[2 * chunkIdx + 1]);
                     Thread cfhT = new Thread(cfh);
                     FTPService.logDebug(String.format("Running thread %s for %s", cfhT.getId(), server.getName()));
                     cfhT.start();
