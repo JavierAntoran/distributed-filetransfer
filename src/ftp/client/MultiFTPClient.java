@@ -315,6 +315,8 @@ public class MultiFTPClient {
             File partFile = Files.createFile(Paths.get(reqFilename + ".part")).toFile();
 
             fileRS = reqFile.getServerList();
+            
+            ArrayList<ArrayList> chunksLeft = new ArrayList<>();
 
             while (receivedChunks < nChunks && fileRS.size() != 0) {
                 cfhThreadList = new ArrayList<Thread>();
@@ -326,7 +328,6 @@ public class MultiFTPClient {
                         reqFile.getFileSize(),
                         chunks);
 
-                ArrayList<Integer> chunksLeft = new ArrayList<Integer>();
 
                 downFileRS = new ArrayList<RemoteServer>();
                 upFileRS = new ArrayList<RemoteServer>();
@@ -346,6 +347,7 @@ public class MultiFTPClient {
                                             serverFilePart),
                                     server.getAddr(),
                                     server.getPort());
+                            packet.setLength(FTPService.SIZEMAX);
 
                             this.s.receive(packet);
 
@@ -362,18 +364,23 @@ public class MultiFTPClient {
                                 FTPService.logWarn(String.format("Unexpected PORT response from %s", server.getName()));
                                 FTPService.logWarn(String.format("Deleting %S server form available servers", server.getName()));
                                 downFileRS.add(server);
+                                ArrayList<Integer> scl = new ArrayList<>();
                                 for (i = chunksPerServer[2 * srvIdx]; i <= chunksPerServer[2 * srvIdx + 1]; i++) {
-                                    chunksLeft.add(i);
+                                    scl.add(i);
                                 }
+                                chunksLeft.add(scl);
                             }
 
                         } catch (IOException e) {
+                            FTPService.logErr(String.format("Exception for %s", server.getName()));
                             FTPService.logErr(e.getMessage());
                             FTPService.logDebug(e);
                             downFileRS.add(server);
+                            ArrayList<Integer> scl = new ArrayList<>();
                             for (i = chunksPerServer[2 * srvIdx]; i <= chunksPerServer[2 * srvIdx + 1]; i++) {
-                                chunksLeft.add(i);
+                                scl.add(i);
                             }
+                            chunksLeft.add(scl);
                         }
                     } else {
                         downFileRS.add(server);
@@ -405,26 +412,34 @@ public class MultiFTPClient {
                     try {
                         cfhT.join();
                         if (cfhL.getLastReceivedChunk() != cfhL.getLastChunk()) {
-                            for (i = cfhL.getLastReceivedChunk(); i <= cfhL.getLastChunk(); i++) {
-                                chunksLeft.add(i);
+                            ArrayList<Integer> scl = new ArrayList<>();
+                            for (i = cfhL.getLastReceivedChunk()+1; i <= cfhL.getLastChunk(); i++) {
+                                scl.add(i);
                             }
+                            chunksLeft.add(scl);
+
                             downFileRS.add(server);
                         }
                     } catch (InterruptedException e) {
                         FTPService.logErr(e.getMessage());
                         FTPService.logDebug(e);
                         if (cfhL.getLastReceivedChunk() != cfhL.getLastChunk()) {
-                            for (i = cfhL.getLastReceivedChunk(); i <= cfhL.getLastChunk(); i++) {
-                                chunksLeft.add(i);
+                            ArrayList<Integer> scl = new ArrayList<>();
+                            for (i = cfhL.getLastReceivedChunk()+1; i <= cfhL.getLastChunk(); i++) {
+                                scl.add(i);
                             }
+                            chunksLeft.add(scl);
                             downFileRS.add(server);
                         }
                     }
                     receivedChunks += cfhL.getLastReceivedChunk() - cfhL.getFirstChunk() + 1;
                 }
 
-                chunks = new Integer[chunksLeft.size()];
-                chunks = chunksLeft.toArray(chunks);
+                if (chunksLeft.size() > 0) {
+                    chunks = new Integer[chunksLeft.get(0).size()];
+                    chunks = (Integer[]) chunksLeft.get(0).toArray(chunks);
+                    chunksLeft.remove(0);
+                }
 
                 for (RemoteServer server : downFileRS) {
                     upFileRS.remove(server);
@@ -433,6 +448,8 @@ public class MultiFTPClient {
 
                 for (i = 0; i < fileRS.size(); i++) {
                     try {
+                        packet.setLength(FTPService.SIZEMAX);
+
                         s.receive(packet);
 
                         response = FTPService.stringFromDatagramPacket(packet);
@@ -453,7 +470,7 @@ public class MultiFTPClient {
                 }
             }
 
-            if (partFile.length() == reqFile.getFileSize()) {
+            if (receivedChunks >= nChunks && partFile.length() == reqFile.getFileSize()) {
                 Files.move(Paths.get(reqFilename + ".part"), Paths.get(reqFilename));
                 System.out.println(
                         String.format("Transfer complete. Received %d bytes",
